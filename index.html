@@ -67,7 +67,13 @@
   <div class="flex-1 flex flex-col overflow-hidden">
     <header id="mainHeader" class="bg-white dark:bg-slate-800 border-b dark:border-slate-700 px-8 py-4 flex flex-col gap-4">
       <div class="flex justify-between items-center">
-        <h2 id="tabTitle" class="text-xl font-bold">작가 정리</h2>
+        <div class="flex items-center gap-4">
+            <h2 id="tabTitle" class="text-xl font-bold">작가 정리</h2>
+            <div id="bulk-action-area" class="hidden flex items-center gap-2 border-l pl-4 dark:border-slate-700">
+                <button onclick="exportFilteredPrompts()" class="text-[10px] font-bold px-2 py-1 bg-emerald-500 text-white rounded hover:bg-emerald-600">카테고리 내보내기</button>
+                <button onclick="deleteFilteredPrompts()" class="text-[10px] font-bold px-2 py-1 bg-rose-500 text-white rounded hover:bg-rose-600">카테고리 일괄삭제</button>
+            </div>
+        </div>
         <div class="flex items-center gap-2">
           <button onclick="toggleBuilder()" class="header-btn bg-slate-600">빌더</button>
           <button id="mainAddBtn" onclick="addItem()" class="header-btn bg-red-500"><i class="fa-solid fa-plus"></i> 추가</button>
@@ -106,35 +112,35 @@
 </div>
 
 <div id="modalArtist" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-50 p-4">
-  <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 shadow-2xl">
-      <h3 class="text-2xl font-black mb-6">작가 정보 편집</h3>
-      <div class="grid grid-cols-2 gap-4 mb-4">
-        <input id="a_name" placeholder="작가 이름" class="border rounded-xl px-4 py-3 font-bold">
-        <input id="a_danbooru" placeholder="Danbooru 건수" class="border rounded-xl px-4 py-3">
-      </div>
-      <div class="mb-6">
-        <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">작가 속성 태그 (내부 분류용)</label>
-        <div id="a_tag_pool" class="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border mb-2 max-h-32 overflow-y-auto"></div>
-        <input id="a_tags" placeholder="선택하거나 직접 입력(쉼표 구분)" class="w-full border rounded-xl px-4 py-2 text-sm">
-      </div>
-      <div class="grid grid-cols-2 gap-8 mb-8 bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border">
-        <div class="space-y-6">
-          <div><div class="flex justify-between items-center mb-1"><label class="font-black text-xs text-blue-500">LINE</label><span id="vis_line" class="font-bold text-xs"></span></div><input id="a_line" type="range" min="1" max="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="updateVisual()"><div class="slider-label"><span>SOFT</span><span>HARD</span></div></div>
-          <div><div class="flex justify-between items-center mb-1"><label class="font-black text-xs text-blue-500">COLOR</label><span id="vis_color" class="font-bold text-xs"></span></div><input id="a_color" type="range" min="1" max="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="updateVisual()"><div class="slider-label"><span>PALE</span><span>VIVID</span></div></div>
+    <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 shadow-2xl">
+        <h3 class="text-2xl font-black mb-6">작가 정보 편집</h3>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <input id="a_name" placeholder="작가 이름" class="border rounded-xl px-4 py-3 font-bold">
+          <input id="a_danbooru" placeholder="Danbooru 건수" class="border rounded-xl px-4 py-3">
         </div>
-        <div class="space-y-6">
-          <div><div class="flex justify-between items-center mb-1"><label class="font-black text-xs text-yellow-500">STABILITY</label><span id="vis_stab" class="font-bold text-xs text-yellow-500"></span></div><input id="a_stab" type="range" min="1" max="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-yellow-500" oninput="updateVisual()"><div class="slider-label"><span>LOW</span><span>HIGH</span></div></div>
-          <div><div class="flex justify-between items-center mb-1"><label class="font-black text-xs text-yellow-500">CONSISTENCY</label><span id="vis_cons" class="font-bold text-xs text-yellow-500"></span></div><input id="a_cons" type="range" min="1" max="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-yellow-500" oninput="updateVisual()"><div class="slider-label"><span>LOW</span><span>HIGH</span></div></div>
+        <div class="mb-6">
+          <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">작가 속성 태그 (내부 분류용)</label>
+          <div id="a_tag_pool" class="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border mb-2 max-h-32 overflow-y-auto"></div>
+          <input id="a_tags" placeholder="선택하거나 직접 입력(쉼표 구분)" class="w-full border rounded-xl px-4 py-2 text-sm">
         </div>
-      </div>
-      <div class="grid grid-cols-3 gap-3 mb-6">
-        <div><label class="file-input-label" for="a_img_file1">IMG 1 첨부</label><input type="file" id="a_img_file1" class="hidden" accept="image/*" onchange="handleImgUpload(event, 'a_img1')"><input type="hidden" id="a_img1"></div>
-        <div><label class="file-input-label" for="a_img_file2">IMG 2 첨부</label><input type="file" id="a_img_file2" class="hidden" accept="image/*" onchange="handleImgUpload(event, 'a_img2')"><input type="hidden" id="a_img2"></div>
-        <div><label class="file-input-label" for="a_img_file3">IMG 3 첨부</label><input type="file" id="a_img_file3" class="hidden" accept="image/*" onchange="handleImgUpload(event, 'a_img3')"><input type="hidden" id="a_img3"></div>
-      </div>
-      <textarea id="a_notes" rows="3" placeholder="작가 관련 특이사항 메모..." class="w-full border rounded-xl p-4 mb-6 text-sm"></textarea>
-      <div class="flex justify-end gap-3"><button onclick="closeModal()" class="px-6 py-2 border rounded-xl font-bold">취소</button><button onclick="saveArtist()" class="px-10 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-lg">저장하기</button></div>
-  </div>
+        <div class="grid grid-cols-2 gap-8 mb-8 bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border">
+          <div class="space-y-6">
+            <div><div class="flex justify-between items-center mb-1"><label class="font-black text-xs text-blue-500">LINE</label><span id="vis_line" class="font-bold text-xs"></span></div><input id="a_line" type="range" min="1" max="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="updateVisual()"><div class="slider-label"><span>SOFT</span><span>HARD</span></div></div>
+            <div><div class="flex justify-between items-center mb-1"><label class="font-black text-xs text-blue-500">COLOR</label><span id="vis_color" class="font-bold text-xs"></span></div><input id="a_color" type="range" min="1" max="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="updateVisual()"><div class="slider-label"><span>PALE</span><span>VIVID</span></div></div>
+          </div>
+          <div class="space-y-6">
+            <div><div class="flex justify-between items-center mb-1"><label class="font-black text-xs text-yellow-500">STABILITY</label><span id="vis_stab" class="font-bold text-xs text-yellow-500"></span></div><input id="a_stab" type="range" min="1" max="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-yellow-500" oninput="updateVisual()"><div class="slider-label"><span>LOW</span><span>HIGH</span></div></div>
+            <div><div class="flex justify-between items-center mb-1"><label class="font-black text-xs text-yellow-500">CONSISTENCY</label><span id="vis_cons" class="font-bold text-xs text-yellow-500"></span></div><input id="a_cons" type="range" min="1" max="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-yellow-500" oninput="updateVisual()"><div class="slider-label"><span>LOW</span><span>HIGH</span></div></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mb-6">
+          <div><label class="file-input-label" for="a_img_file1">IMG 1 첨부</label><input type="file" id="a_img_file1" class="hidden" accept="image/*" onchange="handleImgUpload(event, 'a_img1')"><input type="hidden" id="a_img1"></div>
+          <div><label class="file-input-label" for="a_img_file2">IMG 2 첨부</label><input type="file" id="a_img_file2" class="hidden" accept="image/*" onchange="handleImgUpload(event, 'a_img2')"><input type="hidden" id="a_img2"></div>
+          <div><label class="file-input-label" for="a_img_file3">IMG 3 첨부</label><input type="file" id="a_img_file3" class="hidden" accept="image/*" onchange="handleImgUpload(event, 'a_img3')"><input type="hidden" id="a_img3"></div>
+        </div>
+        <textarea id="a_notes" rows="3" placeholder="작가 관련 특이사항 메모..." class="w-full border rounded-xl p-4 mb-6 text-sm"></textarea>
+        <div class="flex justify-end gap-3"><button onclick="closeModal()" class="px-6 py-2 border rounded-xl font-bold">취소</button><button onclick="saveArtist()" class="px-10 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-lg">저장하기</button></div>
+    </div>
 </div>
 
 <div id="modalStyle" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-50 p-4">
@@ -177,7 +183,6 @@
 </div>
 
 <script>
-// --- 데이터 엔진 ---
 const DB_NAME = "NAIPromptLabDB_V16";
 const STORE_NAME = "labData";
 let db, artists = [], styles = [], prompts = [], researches = [];
@@ -197,11 +202,11 @@ let promptCategories = [
 ];
 let researchCategories = ["기본", "포즈", "색감", "소재"];
 
-let currentTab = 0, currentSettingsSubTab = 'general', currentCategoryFilter = 'all', currentSubFilter = 'all', editId = null, builderVisible = false;
+let currentTab = 0, currentCategoryFilter = 'all', currentSubFilter = 'all', editId = null, builderVisible = false;
 
 async function initDB() { return new Promise((resolve) => { const request = indexedDB.open(DB_NAME, 1); request.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME); request.onsuccess = e => { db = e.target.result; resolve(); }; }); }
 async function saveToDB(key, data) { const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).put(JSON.parse(JSON.stringify(data)), key); }
-async function getFromDB(key) { return new Promise((res) => { const tx = db.transaction(STORE_NAME, "readonly"); const req = tx.objectStore(STORE_NAME).get(key); req.onsuccess = () => res(req.result); }); }
+async function getFromDB(key) { return new Promise((res) => { const tx = db.transaction(STORE_NAME, "readonly"); const req = tx.objectStore(STORE_NAME).get(key); req.onsuccess = () => res(req.result); req.onerror = () => res(null); }); }
 
 async function syncAll() { 
   await saveToDB('artists', artists); await saveToDB('styles', styles); 
@@ -213,14 +218,33 @@ async function syncAll() {
 
 window.addEventListener('load', async () => { 
   await initDB(); 
-  artists = await getFromDB('artists') || []; styles = await getFromDB('styles') || []; 
-  prompts = await getFromDB('prompts') || []; researches = await getFromDB('researches') || []; 
-  artistCommonTags = JSON.parse(localStorage.getItem('artTags') || '["실사", "반실사", "애니", "화려한", "깔끔한", "선명한"]');
+  artists = await getFromDB('artists') || []; 
+  styles = await getFromDB('styles') || []; 
+  prompts = await getFromDB('prompts') || []; 
+  researches = await getFromDB('researches') || []; 
+  
+  const savedArtTags = localStorage.getItem('artTags');
+  if(savedArtTags) artistCommonTags = JSON.parse(savedArtTags);
   const savedPCats = localStorage.getItem('pCats_V2');
   if(savedPCats) promptCategories = JSON.parse(savedPCats);
-  researchCategories = JSON.parse(localStorage.getItem('researchCats') || '["기본", "포즈", "색감", "소재"]'); 
+  const savedRCats = localStorage.getItem('researchCats');
+  if(savedRCats) researchCategories = JSON.parse(savedRCats);
+
   renderList(); 
 });
+
+function getIndicator(val, type='bar') {
+  val = parseInt(val);
+  if(type==='star') return '★'.repeat(val) + '☆'.repeat(5-val);
+  return '▮'.repeat(val) + '▯'.repeat(5-val);
+}
+
+function updateVisual() {
+  document.getElementById('vis_line').textContent = getIndicator(document.getElementById('a_line').value);
+  document.getElementById('vis_color').textContent = getIndicator(document.getElementById('a_color').value);
+  document.getElementById('vis_stab').textContent = getIndicator(document.getElementById('a_stab').value, 'star');
+  document.getElementById('vis_cons').textContent = getIndicator(document.getElementById('a_cons').value, 'star');
+}
 
 function handleImgUpload(event, targetId) {
   const file = event.target.files[0]; if (!file) return;
@@ -240,6 +264,12 @@ function switchTab(tab) {
   if(document.getElementById('tab' + tab)) document.getElementById('tab' + tab).classList.add('tab-active');
   document.getElementById('tabTitle').textContent = ["작가 정리", "그림체 정리", "프롬프트 목록", "연구 정리", "아티스트 믹서", "시스템 설정"][tab];
   document.getElementById('mainHeader').style.display = (tab === 5) ? 'none' : 'flex';
+  
+  // 프롬프트 목록 탭일 때만 일괄 작업 버튼 노출
+  const bulkArea = document.getElementById('bulk-action-area');
+  if(tab === 2) bulkArea.classList.remove('hidden');
+  else bulkArea.classList.add('hidden');
+
   renderList(); 
 }
 
@@ -280,402 +310,489 @@ function renderSideCategories() {
   }
 }
 
+// --- 일괄 관리 기능 추가 ---
+function deleteFilteredPrompts() {
+    if(currentTab !== 2) return;
+    const catText = currentCategoryFilter === 'all' ? '전체' : `${currentCategoryFilter}${currentSubFilter !== 'all' ? ' > ' + currentSubFilter : ''}`;
+    if(!confirm(`[${catText}] 카테고리의 모든 프롬프트를 삭제하시겠습니까?`)) return;
+
+    prompts = prompts.filter(p => {
+        const matchMain = currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter;
+        const matchSub = currentSubFilter === 'all' || p.subCat === currentSubFilter;
+        return !(matchMain && matchSub);
+    });
+    
+    syncAll();
+    renderList();
+    alert('삭제되었습니다.');
+}
+
+function exportFilteredPrompts() {
+    if(currentTab !== 2) return;
+    const filtered = prompts.filter(p => {
+        const matchMain = currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter;
+        const matchSub = currentSubFilter === 'all' || p.subCat === currentSubFilter;
+        return matchMain && matchSub;
+    });
+
+    if(filtered.length === 0) return alert('내보낼 데이터가 없습니다.');
+
+    const data = {
+        type: "NAI_PROMPT_PARTIAL",
+        category: currentCategoryFilter,
+        subCategory: currentSubFilter,
+        data: filtered
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const filename = `NAI_Prompts_${currentCategoryFilter}_${currentSubFilter}.json`;
+    a.href = url;
+    a.download = filename;
+    a.click();
+}
+
+// --- 렌더링 함수 ---
 function renderList() {
   const query = document.getElementById('searchBar').value.toLowerCase();
-  const cont = document.getElementById('content'); cont.innerHTML = '';
+  const cont = document.getElementById('content'); 
+  cont.innerHTML = '';
   renderSideCategories();
 
-  if (currentTab === 0) { 
+  if (currentTab === 0) { // 작가
+    cont.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8";
     artists.filter(a => (a.name.toLowerCase().includes(query) || (a.tags && a.tags.toLowerCase().includes(query))) && (currentCategoryFilter === 'all' || (a.tags && a.tags.includes(currentCategoryFilter))))
     .forEach((item) => {
       const card = document.createElement('div');
-      card.className = 'bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm p-8 flex flex-col md:flex-row gap-8 card border dark:border-slate-700 relative';
+      card.className = 'bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm p-6 flex flex-col gap-6 card border dark:border-slate-700 relative group';
       card.innerHTML = `
         <div class="absolute top-4 right-4 flex gap-2 move-btn">
-          <button onclick="moveItem('artist', '${item.id}', -1)" class="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full"><i class="fa-solid fa-chevron-up"></i></button>
-          <button onclick="moveItem('artist', '${item.id}', 1)" class="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full"><i class="fa-solid fa-chevron-down"></i></button>
+          <button onclick="edit('artist','${item.id}')" class="text-blue-500 text-xs font-bold mr-2">수정</button>
+          <button onclick="del('artist','${item.id}')" class="text-red-500 text-xs font-bold">삭제</button>
         </div>
         <div class="flex-1">
-          <div class="flex justify-between items-start mb-4">
-            <div>
-              <h3 class="font-black text-2xl">${item.name}</h3>
-              <div class="flex flex-wrap gap-1 mt-1">${item.tags ? item.tags.split(',').map(t => `<span class="bg-blue-50 dark:bg-blue-900/40 px-2 py-0.5 rounded text-[10px] font-bold text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">${t.trim()}</span>`).join('') : ''}</div>
-              <div class="flex gap-6 mt-4 text-xs font-black text-slate-500 uppercase">
-                <div>LINE <span class="text-blue-600">${getIndicator(item.line)}</span></div>
-                <div>COLOR <span class="text-blue-600">${getIndicator(item.color)}</span></div>
-                <div>STAB <span class="text-yellow-500">${getIndicator(item.stab,'star')}</span></div>
-                <div>CONS <span class="text-yellow-500">${getIndicator(item.cons,'star')}</span></div>
-              </div>
-            </div>
-            <div class="flex gap-3 text-slate-300 pr-12"><button onclick="edit('artist','${item.id}')" class="text-blue-500 text-xs font-bold">수정</button><button onclick="del('artist','${item.id}')" class="text-red-500 text-xs font-bold">삭제</button></div>
+          <h3 class="font-black text-xl mb-1">${item.name} <span class="text-xs font-normal text-slate-400">#${item.danbooru || 0}</span></h3>
+          <div class="flex flex-wrap gap-1 mb-4">${item.tags ? item.tags.split(',').map(t => `<span class="bg-blue-50 dark:bg-blue-900/40 px-2 py-0.5 rounded text-[10px] font-bold text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">${t.trim()}</span>`).join('') : ''}</div>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-bold mb-4">
+            <div class="flex justify-between"><span>LINE</span><span class="text-blue-500">${getIndicator(item.line)}</span></div>
+            <div class="flex justify-between"><span>COLOR</span><span class="text-blue-500">${getIndicator(item.color)}</span></div>
+            <div class="flex justify-between"><span>STAB</span><span class="text-yellow-500">${getIndicator(item.stab,'star')}</span></div>
+            <div class="flex justify-between"><span>CONS</span><span class="text-yellow-500">${getIndicator(item.cons,'star')}</span></div>
           </div>
-          <div class="grid grid-cols-3 gap-4 mb-6">${[0,1,2].map(i => `<div class="img-container"><img src="${item.imgs[i]||''}" onerror="this.src='https://placehold.co/400x600?text=No+Img'"></div>`).join('')}</div>
-          ${item.notes ? `<div class="mt-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap"><i class="fa-solid fa-note-sticky mr-2 opacity-50"></i>${item.notes}</div>` : ''}
-        </div>
-        <button onclick="addToBuilder('artist','${item.id}')" class="md:w-32 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl font-black">ADD</button>`;
+          <div class="grid grid-cols-3 gap-2">${item.imgs.map(img => `<div class="img-container"><img src="${img || 'https://placehold.co/400x600?text=No+Img'}"></div>`).join('')}</div>
+          <button onclick="addToBuilder('${item.name}')" class="w-full mt-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-xl text-[10px] font-bold hover:bg-blue-500 hover:text-white transition-all">프롬프트 추가</button>
+        </div>`;
       cont.appendChild(card);
     });
-  } else if (currentTab === 1) {
-    styles.filter(s => s.title.toLowerCase().includes(query)).forEach((item) => {
+  } else if (currentTab === 1) { // 그림체
+    cont.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
+    styles.filter(s => s.title.toLowerCase().includes(query)).forEach(item => {
       const card = document.createElement('div');
-      card.className = 'bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm p-8 flex flex-col md:flex-row gap-8 card border dark:border-slate-700 relative';
+      card.className = 'bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 overflow-hidden group relative';
       card.innerHTML = `
-        <div class="absolute top-4 right-4 flex gap-2 move-btn">
-          <button onclick="moveItem('style', '${item.id}', -1)" class="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full"><i class="fa-solid fa-chevron-up"></i></button>
-          <button onclick="moveItem('style', '${item.id}', 1)" class="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full"><i class="fa-solid fa-chevron-down"></i></button>
+        <div class="absolute top-2 right-2 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onclick="edit('style','${item.id}')" class="bg-white/90 p-2 rounded-lg text-xs font-bold text-blue-600 shadow">수정</button>
+          <button onclick="del('style','${item.id}')" class="bg-white/90 p-2 rounded-lg text-xs font-bold text-red-600 shadow">삭제</button>
         </div>
-        <div class="flex-1">
-          <div class="flex justify-between items-start mb-4">
-             <h3 class="font-black text-2xl">${item.title}</h3>
-             <div class="flex gap-3 text-slate-300 pr-12"><button onclick="edit('style','${item.id}')" class="text-blue-500 text-xs font-bold">수정</button><button onclick="del('style','${item.id}')" class="text-red-500 text-xs font-bold">삭제</button></div>
-          </div>
-          <div class="grid grid-cols-3 gap-4">${item.imgs.map(img => `<div class="img-container"><img src="${img}" onerror="this.src='https://placehold.co/400x600?text=Style+Img'"></div>`).join('')}</div>
+        <div class="grid grid-cols-3 h-40 bg-slate-100">
+           ${item.imgs.map(img => `<img src="${img || 'https://placehold.co/200x300?text=Style'}" class="w-full h-full object-cover border-r border-white/20 last:border-0">`).join('')}
         </div>
-        <button onclick="addToBuilder('style','${item.id}')" class="md:w-32 bg-violet-50 dark:bg-violet-900/20 text-violet-600 rounded-2xl font-black">ADD</button>`;
+        <div class="p-4">
+          <h4 class="font-bold text-sm mb-2">${item.title}</h4>
+          <p class="text-[10px] text-slate-500 font-mono mb-4 line-clamp-2">${item.pos}</p>
+          <button onclick="addToBuilder('${item.pos}')" class="w-full py-2 bg-slate-50 dark:bg-slate-700 rounded-lg text-[10px] font-bold">전체 프롬프트 추가</button>
+        </div>`;
       cont.appendChild(card);
     });
-  } else if (currentTab === 2) {
-    const grid = document.createElement('div'); grid.className = 'grid grid-cols-2 md:grid-cols-4 gap-4';
+  } else if (currentTab === 2) { // 프롬프트
+    cont.className = "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4";
     prompts.filter(p => {
-        const matchMain = (currentCategoryFilter === 'all' || p.category === currentCategoryFilter);
-        const matchSub = (currentSubFilter === 'all' || p.subCategory === currentSubFilter);
-        const matchQuery = p.word.toLowerCase().includes(query) || (p.desc && p.desc.toLowerCase().includes(query));
-        return matchMain && matchSub && matchQuery;
-    }).forEach((p) => {
-      const div = document.createElement('div'); div.className = 'bg-white dark:bg-slate-800 p-4 rounded-2xl border flex flex-col gap-2 hover:border-blue-500 cursor-pointer shadow-sm relative group';
-      div.innerHTML = `
-        <div class="flex justify-between items-start">
-            <span class="font-mono text-emerald-600 dark:text-emerald-400 font-black text-sm break-all leading-tight">${p.word}</span>
-            <div class="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onclick="event.stopPropagation(); moveItem('prompt', '${p.id}', -1)" class="text-slate-300 hover:text-blue-500"><i class="fa-solid fa-angle-left"></i></button>
-                <button onclick="event.stopPropagation(); moveItem('prompt', '${p.id}', 1)" class="text-slate-300 hover:text-blue-500"><i class="fa-solid fa-angle-right"></i></button>
-                <button onclick="event.stopPropagation(); edit('prompt','${p.id}')" class="text-blue-400 ml-1"><i class="fa-solid fa-edit text-[10px]"></i></button>
-                <button onclick="event.stopPropagation(); del('prompt','${p.id}')" class="text-red-400 ml-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
-            </div>
+        const matchSearch = p.word.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query);
+        const matchMain = currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter;
+        const matchSub = currentSubFilter === 'all' || p.subCat === currentSubFilter;
+        return matchSearch && matchMain && matchSub;
+    }).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-3 flex flex-col gap-2 group relative cursor-pointer hover:shadow-md';
+      card.onclick = (e) => { if(!e.target.closest('button')) addToBuilder(item.word); };
+      card.innerHTML = `
+        <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+            <button onclick="edit('prompt','${item.id}')" class="p-1 bg-blue-500 text-white rounded text-[8px]"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="del('prompt','${item.id}')" class="p-1 bg-red-500 text-white rounded text-[8px]"><i class="fa-solid fa-trash"></i></button>
         </div>
-        ${p.desc ? `<p class="text-[10px] font-bold text-slate-400 leading-tight border-t pt-1 dark:border-slate-700">${p.desc}</p>` : ''}
-        ${p.image ? `<div class="w-full h-24 rounded-lg overflow-hidden my-1 bg-slate-100"><img src="${p.image}" class="w-full h-full object-cover"></div>` : ''}
-        <div class="flex gap-1 flex-wrap mt-auto pt-2">
-            <span class="cat-badge">${p.category}</span>
-            ${p.subCategory ? `<span class="cat-badge !bg-emerald-100 dark:!bg-emerald-900/40">${p.subCategory}</span>`:''}
-        </div>`;
-      div.onclick = () => { document.getElementById('positive').value += (document.getElementById('positive').value ? ', ' : '') + p.word; };
-      grid.appendChild(div);
-    });
-    cont.appendChild(grid);
-  } else if (currentTab === 3) {
-    const grid = document.createElement('div'); grid.className = 'grid grid-cols-1 md:grid-cols-3 gap-6';
-    researches.filter(r => (currentCategoryFilter === 'all' || r.category === currentCategoryFilter) && r.title.toLowerCase().includes(query)).forEach((r) => {
-      const div = document.createElement('div'); div.className = 'bg-white dark:bg-slate-800 rounded-3xl border overflow-hidden flex flex-col shadow-sm card relative';
-      div.innerHTML = `
-        <div class="absolute top-2 right-2 flex gap-1 move-btn z-10">
-          <button onclick="moveItem('research', '${r.id}', -1)" class="w-6 h-6 bg-white/80 rounded-full text-[10px]"><i class="fa-solid fa-chevron-up"></i></button>
-          <button onclick="moveItem('research', '${r.id}', 1)" class="w-6 h-6 bg-white/80 rounded-full text-[10px]"><i class="fa-solid fa-chevron-down"></i></button>
+        <div class="w-full aspect-square bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden">
+            <img src="${item.image || 'https://placehold.co/200x200?text=Prompt'}" class="w-full h-full object-cover">
         </div>
-        <div class="img-container !pt-[100%]"><img src="${r.image}" onerror="this.src='https://placehold.co/400x400?text=Research'"></div>
-        <div class="p-6 flex-1 flex flex-col">
-            <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-lg">${r.title}</h4><span class="cat-badge">${r.category}</span></div>
-            <p class="text-xs text-slate-500 mb-4 flex-1 line-clamp-3">${r.desc}</p>
-            <div class="flex gap-2">
-                <button onclick="addToBuilder('research','${r.id}')" class="flex-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 py-2 rounded-xl font-bold text-xs">ADD</button>
-                <button onclick="edit('research', '${r.id}')" class="px-2 text-blue-400"><i class="fa-solid fa-edit"></i></button>
-                <button onclick="del('research','${r.id}')" class="px-2 text-red-400"><i class="fa-solid fa-trash"></i></button>
+        <div>
+            <div class="cat-badge mb-1">${item.subCat}</div>
+            <div class="text-[11px] font-black truncate">${item.word}</div>
+            <div class="text-[9px] text-slate-400 font-bold truncate">${item.desc}</div>
+        </div>`;
+      cont.appendChild(card);
+    });
+  } else if (currentTab === 3) { // 연구
+    cont.className = "grid grid-cols-1 gap-6";
+    researches.filter(r => (r.title.toLowerCase().includes(query) || r.prompt.toLowerCase().includes(query)) && (currentCategoryFilter === 'all' || r.category === currentCategoryFilter))
+    .forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-6 flex flex-col md:flex-row gap-6 relative group';
+      card.innerHTML = `
+        <div class="absolute top-4 right-4 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onclick="edit('research','${item.id}')" class="text-blue-500 text-xs font-bold">수정</button>
+            <button onclick="del('research','${item.id}')" class="text-red-500 text-xs font-bold">삭제</button>
+        </div>
+        <div class="w-full md:w-64 aspect-square bg-slate-100 rounded-xl overflow-hidden shrink-0">
+            <img src="${item.image || 'https://placehold.co/400x400?text=Research'}" class="w-full h-full object-cover">
+        </div>
+        <div class="flex-1 space-y-3">
+            <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-black">${item.category}</span>
+                <h4 class="font-black text-lg">${item.title}</h4>
+            </div>
+            <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border dark:border-slate-700">
+                <p class="text-[10px] font-bold text-slate-400 mb-1">PROMPT</p>
+                <p class="text-xs font-mono break-all leading-relaxed">${item.prompt}</p>
+            </div>
+            <div class="p-3">
+                <p class="text-[10px] font-bold text-slate-400 mb-1">NOTES</p>
+                <p class="text-sm leading-relaxed">${item.desc}</p>
             </div>
         </div>`;
-      grid.appendChild(div);
+      cont.appendChild(card);
     });
-    cont.appendChild(grid);
-  } else if (currentTab === 4) renderMixer(cont);
-  else if (currentTab === 5) renderSettings(cont);
-}
-
-// --- [개선된] 순서 조정 기능 (ID 기반으로 전체 배열 위치 찾기) ---
-async function moveItem(type, id, direction) {
-    let list;
-    if(type === 'artist') list = artists;
-    else if(type === 'style') list = styles;
-    else if(type === 'research') list = researches;
-    else if(type === 'prompt') list = prompts;
-    
-    const index = list.findIndex(item => item.id === id);
-    if(index === -1) return;
-
-    const newIdx = index + direction;
-    if(newIdx < 0 || newIdx >= list.length) return;
-
-    // 항목 스왑
-    [list[index], list[newIdx]] = [list[newIdx], list[index]];
-    
-    await syncAll(); 
-    renderList();
-}
-
-async function moveCat(type, index, direction) {
-    let list = (type === 'prompt') ? promptCategories : researchCategories;
-    const newIdx = index + direction;
-    if(newIdx < 0 || newIdx >= list.length) return;
-    [list[index], list[newIdx]] = [list[newIdx], list[index]];
-    await syncAll(); renderSettingsDetail();
-}
-
-async function moveSubCat(pIdx, sIdx, direction) {
-    const subs = promptCategories[pIdx].subs;
-    const newIdx = sIdx + direction;
-    if(newIdx < 0 || newIdx >= subs.length) return;
-    [subs[sIdx], subs[newIdx]] = [subs[newIdx], subs[sIdx]];
-    await syncAll(); renderSettingsDetail();
-}
-
-// --- 설정 탭 ---
-function renderSettings(cont) {
-  cont.innerHTML = `
-    <div class="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl border dark:border-slate-700 flex min-h-[600px] overflow-hidden fade-in">
-      <div class="w-64 bg-slate-50 dark:bg-slate-900/50 border-r dark:border-slate-700 p-6 space-y-2">
-        <button onclick="switchSettingsSubTab('general')" class="settings-sub-tab ${currentSettingsSubTab==='general'?'active':''} w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-sliders"></i> 일반 설정</button>
-        <button onclick="switchSettingsSubTab('tags_artist')" class="settings-sub-tab ${currentSettingsSubTab==='tags_artist'?'active':''} w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-user-gear"></i> 작가 속성 관리</button>
-        <button onclick="switchSettingsSubTab('tags_prompt')" class="settings-sub-tab ${currentSettingsSubTab==='tags_prompt'?'active':''} w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-layer-group"></i> 프롬프트 분류 관리</button>
-        <button onclick="switchSettingsSubTab('tags_research')" class="settings-sub-tab ${currentSettingsSubTab==='tags_research'?'active':''} w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-flask"></i> 연구 분류 관리</button>
-        <button onclick="switchSettingsSubTab('import_export')" class="settings-sub-tab ${currentSettingsSubTab==='import_export'?'active':''} w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-file-export"></i> 데이터 관리</button>
-      </div>
-      <div id="settings-detail" class="flex-1 p-12 overflow-y-auto"></div>
-    </div>
-  `;
-  renderSettingsDetail();
-}
-function switchSettingsSubTab(sub) { currentSettingsSubTab = sub; renderSettings(document.getElementById('content')); }
-
-function renderSettingsDetail() {
-  const detail = document.getElementById('settings-detail');
-  if (currentSettingsSubTab === 'general') {
-    detail.innerHTML = `<h3 class="text-2xl font-black mb-8">일반 설정</h3><button onclick="toggleDarkMode()" class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg">다크모드 전환</button>`;
-  } else if (currentSettingsSubTab === 'tags_artist') {
-    detail.innerHTML = `
-      <h3 class="text-2xl font-black mb-10">작가 전용 속성 관리</h3>
-      <p class="text-sm text-slate-500 mb-6">작가 편집 시 선택 가능한 속성 태그들을 관리합니다.</p>
-      <div class="flex gap-2 mb-8"><input id="new_art_tag" placeholder="예: 실사, 반실사" class="flex-1 border rounded-xl px-4 py-3 text-sm"><button onclick="addArtTag()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-md">추가</button></div>
-      <div class="flex flex-wrap gap-2">${artistCommonTags.map(t => `<span class="bg-white dark:bg-slate-700 border px-4 py-2 rounded-full text-xs font-bold flex items-center gap-3">${t}<i onclick="delArtTag('${t}')" class="fa-solid fa-xmark cursor-pointer text-red-400"></i></span>`).join('')}</div>
-    `;
-  } else if (currentSettingsSubTab === 'tags_prompt') {
-    detail.innerHTML = `
-      <h3 class="text-2xl font-black mb-10">프롬프트 대/소분류 관리</h3>
-      <div class="flex gap-2 mb-8"><input id="new_pcat" placeholder="새로운 대분류명" class="flex-1 border rounded-xl px-4 py-3 text-sm"><button onclick="addCat('prompt')" class="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold shadow-md">대분류 추가</button></div>
-      <div class="space-y-4">
-          ${promptCategories.map((c, idx) => `
-          <div class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border dark:border-slate-700">
-              <div class="flex justify-between items-center mb-4">
-                  <span class="font-black text-lg text-emerald-600">${c.name}</span>
-                  <div class="flex gap-3 items-center">
-                      <button onclick="moveCat('prompt', ${idx}, -1)" class="w-8 h-8 bg-white dark:bg-slate-800 border rounded-full text-xs text-slate-400"><i class="fa-solid fa-chevron-up"></i></button>
-                      <button onclick="moveCat('prompt', ${idx}, 1)" class="w-8 h-8 bg-white dark:bg-slate-800 border rounded-full text-xs text-slate-400"><i class="fa-solid fa-chevron-down"></i></button>
-                      <i onclick="delCat('prompt','${c.name}')" class="fa-solid fa-trash text-red-400 cursor-pointer text-sm ml-2"></i>
-                  </div>
-              </div>
-              <div class="flex gap-2 mb-4"><input id="new_sub_${idx}" placeholder="소분류 추가" class="flex-1 border rounded-xl px-3 py-2 text-xs"><button onclick="addSubCat(${idx})" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold">추가</button></div>
-              <div class="grid grid-cols-2 gap-2">${c.subs.map((s, sIdx) => `
-                <div class="bg-white dark:bg-slate-800 border px-4 py-2 rounded-xl text-[11px] flex items-center justify-between group font-bold">
-                  <span>${s}</span>
-                  <div class="flex items-center gap-3">
-                     <button onclick="moveSubCat(${idx}, ${sIdx}, -1)" class="text-slate-300 hover:text-blue-500"><i class="fa-solid fa-angle-up"></i></button>
-                     <button onclick="moveSubCat(${idx}, ${sIdx}, 1)" class="text-slate-300 hover:text-blue-500"><i class="fa-solid fa-angle-down"></i></button>
-                     <i onclick="delSubCat(${idx},'${s}')" class="fa-solid fa-xmark text-red-300 cursor-pointer ml-1"></i>
-                  </div>
-                </div>`).join('')}
-              </div>
-          </div>`).join('')}
-      </div>
-    `;
-  } else if (currentSettingsSubTab === 'tags_research') {
-    detail.innerHTML = `
-      <h3 class="text-2xl font-black mb-10">연구 정리 카테고리 관리</h3>
-      <div class="flex gap-2 mb-8"><input id="new_rcat" placeholder="예: 포즈, 광원" class="flex-1 border rounded-xl px-4 py-3 text-sm"><button onclick="addCat('research')" class="bg-amber-600 text-white px-8 py-3 rounded-xl font-bold shadow-md">추가</button></div>
-      <div class="space-y-2">${researchCategories.map((c, idx) => `
-          <div class="flex justify-between text-sm p-4 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-2xl items-center font-bold">
-              <span>${c}</span>
-              <div class="flex gap-4 items-center">
-                  <button onclick="moveCat('research', ${idx}, -1)" class="text-slate-400"><i class="fa-solid fa-chevron-up"></i></button>
-                  <button onclick="moveCat('research', ${idx}, 1)" class="text-slate-400"><i class="fa-solid fa-chevron-down"></i></button>
-                  <i onclick="delCat('research','${c}')" class="fa-solid fa-trash text-red-400 cursor-pointer"></i>
-              </div>
-          </div>`).join('')}</div>
-    `;
-  } else if (currentSettingsSubTab === 'import_export') {
-    detail.innerHTML = `<h3 class="text-2xl font-black mb-4">데이터 관리</h3><p class="text-sm text-blue-500 mb-8 font-bold">내보내기 시 각 파트별 JSON 파일이 생성됩니다.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-6">${['artists','prompts','styles','researches'].map(type => `<div class="p-6 border dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center"><p class="font-black uppercase text-slate-500">${type}</p><div class="flex gap-2"><button onclick="exportSingle('${type}')" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold">내보내기</button><button onclick="importSingle('${type}')" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold">가져오기</button></div></div>`).join('')}</div><button onclick="exportData()" class="mt-8 w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-lg shadow-xl">전체 백업 생성</button>`;
+  } else if (currentTab === 4) { // 믹서
+    renderMixer();
+  } else if (currentTab === 5) { // 설정
+    renderSettings();
   }
 }
 
-// --- 카테고리 로직 ---
-function addArtTag() { const v = document.getElementById('new_art_tag').value.trim(); if(v && !artistCommonTags.includes(v)) { artistCommonTags.push(v); syncAll(); renderSettingsDetail(); } }
-function delArtTag(t) { if(confirm('속성 삭제?')) { artistCommonTags = artistCommonTags.filter(x => x !== t); syncAll(); renderSettingsDetail(); } }
-function addCat(type) { 
-    const n = document.getElementById(type === 'prompt' ? 'new_pcat' : 'new_rcat').value.trim(); 
-    if(n) { 
-        if(type === 'prompt') promptCategories.push({name: n, subs: []}); 
-        else researchCategories.push(n); 
-        syncAll(); renderSettingsDetail(); 
-    } 
-}
-function addSubCat(idx) {
-    const v = document.getElementById(`new_sub_${idx}`).value.trim();
-    if(v && !promptCategories[idx].subs.includes(v)) {
-        promptCategories[idx].subs.push(v); syncAll(); renderSettingsDetail();
+// --- 나머지 로직 (기존 기능 유지) ---
+function addItem() {
+    editId = null;
+    if(currentTab === 0) {
+        document.getElementById('modalArtist').classList.remove('hidden');
+        document.getElementById('a_name').value = ''; document.getElementById('a_danbooru').value = '';
+        document.getElementById('a_tags').value = ''; document.getElementById('a_notes').value = '';
+        ['a_img1','a_img2','a_img3'].forEach(id => document.getElementById(id).value = '');
+        ['a_line','a_color','a_stab','a_cons'].forEach(id => document.getElementById(id).value = 3);
+        renderArtistTagPool(); updateVisual();
+    } else if(currentTab === 1) {
+        document.getElementById('modalStyle').classList.remove('hidden');
+        document.getElementById('s_title').value = ''; document.getElementById('s_pos').value = '';
+        ['s_img1','s_img2','s_img3'].forEach(id => document.getElementById(id).value = '');
+    } else if(currentTab === 2) {
+        document.getElementById('modalPrompt').classList.remove('hidden');
+        document.getElementById('p_word').value = ''; document.getElementById('p_desc').value = '';
+        document.getElementById('p_image').value = '';
+        renderPromptCatSelects();
+    } else if(currentTab === 3) {
+        document.getElementById('modalResearch').classList.remove('hidden');
+        document.getElementById('r_title').value = ''; document.getElementById('r_prompt').value = '';
+        document.getElementById('r_desc').value = ''; document.getElementById('r_image').value = '';
+        const catS = document.getElementById('r_category'); catS.innerHTML = researchCategories.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 }
-function delSubCat(pIdx, sName) {
-    promptCategories[pIdx].subs = promptCategories[pIdx].subs.filter(s => s !== sName);
-    syncAll(); renderSettingsDetail();
-}
-function delCat(type, n) { if(confirm('카테고리 삭제?')) { if(type === 'prompt') promptCategories = promptCategories.filter(c => c.name !== n); else researchCategories = researchCategories.filter(c => c !== n); syncAll(); renderSettingsDetail(); } }
 
-// --- 프롬프트 모달 전용 ---
+function renderArtistTagPool() {
+    const pool = document.getElementById('a_tag_pool');
+    pool.innerHTML = artistCommonTags.map(t => `<span onclick="toggleArtistTag('${t}')" class="tag-chip px-3 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-700">${t}</span>`).join('');
+}
+
+function toggleArtistTag(t) {
+    const input = document.getElementById('a_tags');
+    let tags = input.value.split(',').map(x => x.trim()).filter(x => x);
+    if(tags.includes(t)) tags = tags.filter(x => x !== t);
+    else tags.push(t);
+    input.value = tags.join(', ');
+}
+
+function renderPromptCatSelects() {
+    const main = document.getElementById('p_main_cat');
+    main.innerHTML = promptCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    updateSubCatSelect();
+}
+
 function updateSubCatSelect() {
     const mainVal = document.getElementById('p_main_cat').value;
-    const subSelect = document.getElementById('p_sub_cat');
+    const sub = document.getElementById('p_sub_cat');
     const parent = promptCategories.find(c => c.name === mainVal);
-    subSelect.innerHTML = '<option value="">소분류 선택 안함</option>' + (parent ? parent.subs.map(s => `<option value="${s}">${s}</option>`).join('') : '');
+    sub.innerHTML = parent.subs.map(s => `<option value="${s}">${s}</option>`).join('');
 }
 
-// --- CRUD ---
-async function saveArtist() { const d = { id: editId || Date.now().toString(), name: document.getElementById('a_name').value, danbooru: document.getElementById('a_danbooru').value, tags: document.getElementById('a_tags').value, line: parseInt(document.getElementById('a_line').value), color: parseInt(document.getElementById('a_color').value), stab: parseInt(document.getElementById('a_stab').value), cons: parseInt(document.getElementById('a_cons').value), imgs: [document.getElementById('a_img1').value, document.getElementById('a_img2').value, document.getElementById('a_img3').value], notes: document.getElementById('a_notes').value }; if(editId) artists = artists.map(x => x.id === editId ? d : x); else artists.push(d); await syncAll(); closeModal(); renderList(); }
-async function saveStyle() { const d = { id: editId || Date.now().toString(), title: document.getElementById('s_title').value, pos: document.getElementById('s_pos').value, imgs: [document.getElementById('s_img1').value, document.getElementById('s_img2').value, document.getElementById('s_img3').value] }; if(editId) styles = styles.map(x => x.id === editId ? d : x); else styles.push(d); await syncAll(); closeModal(); renderList(); }
-async function savePrompt() { 
-  const d = { 
-    id: editId || Date.now().toString(), 
-    word: document.getElementById('p_word').value, 
-    desc: document.getElementById('p_desc').value, 
-    category: document.getElementById('p_main_cat').value, 
-    subCategory: document.getElementById('p_sub_cat').value, 
-    image: document.getElementById('p_image').value 
-  }; 
-  if(editId) prompts = prompts.map(x => x.id === editId ? d : x);
-  else prompts.push(d); 
-  await syncAll(); closeModal(); renderList(); 
+function saveArtist() {
+    const obj = {
+        id: editId || Date.now().toString(),
+        name: document.getElementById('a_name').value,
+        danbooru: document.getElementById('a_danbooru').value,
+        tags: document.getElementById('a_tags').value,
+        line: document.getElementById('a_line').value,
+        color: document.getElementById('a_color').value,
+        stab: document.getElementById('a_stab').value,
+        cons: document.getElementById('a_cons').value,
+        imgs: [document.getElementById('a_img1').value, document.getElementById('a_img2').value, document.getElementById('a_img3').value],
+        notes: document.getElementById('a_notes').value
+    };
+    if(editId) artists = artists.map(a => a.id === editId ? obj : a);
+    else artists.push(obj);
+    syncAll(); closeModal(); renderList();
 }
-async function saveResearch() { const d = { id: editId || Date.now().toString(), title: document.getElementById('r_title').value, category: document.getElementById('r_category').value, prompt: document.getElementById('r_prompt').value, desc: document.getElementById('r_desc').value, image: document.getElementById('r_image').value }; if(editId) researches = researches.map(x => x.id === editId ? d : x); else researches.push(d); await syncAll(); closeModal(); renderList(); }
+
+function saveStyle() {
+    const obj = {
+        id: editId || Date.now().toString(),
+        title: document.getElementById('s_title').value,
+        pos: document.getElementById('s_pos').value,
+        imgs: [document.getElementById('s_img1').value, document.getElementById('s_img2').value, document.getElementById('s_img3').value]
+    };
+    if(editId) styles = styles.map(s => s.id === editId ? obj : s);
+    else styles.push(obj);
+    syncAll(); closeModal(); renderList();
+}
+
+function savePrompt() {
+    const obj = {
+        id: editId || Date.now().toString(),
+        word: document.getElementById('p_word').value,
+        desc: document.getElementById('p_desc').value,
+        mainCat: document.getElementById('p_main_cat').value,
+        subCat: document.getElementById('p_sub_cat').value,
+        image: document.getElementById('p_image').value
+    };
+    if(editId) prompts = prompts.map(p => p.id === editId ? obj : p);
+    else prompts.push(obj);
+    syncAll(); closeModal(); renderList();
+}
+
+function saveResearch() {
+    const obj = {
+        id: editId || Date.now().toString(),
+        title: document.getElementById('r_title').value,
+        category: document.getElementById('r_category').value,
+        prompt: document.getElementById('r_prompt').value,
+        desc: document.getElementById('r_desc').value,
+        image: document.getElementById('r_image').value
+    };
+    if(editId) researches = researches.map(r => r.id === editId ? obj : r);
+    else researches.push(obj);
+    syncAll(); closeModal(); renderList();
+}
 
 function edit(type, id) {
-  editId = id;
-  if(type === 'artist') {
-    const item = artists.find(x => x.id === id);
-    document.getElementById('modalArtist').classList.remove('hidden');
-    document.getElementById('a_name').value = item.name; document.getElementById('a_danbooru').value = item.danbooru || '';
-    document.getElementById('a_tags').value = item.tags || '';
-    document.getElementById('a_line').value = item.line; document.getElementById('a_color').value = item.color;
-    document.getElementById('a_stab').value = item.stab; document.getElementById('a_cons').value = item.cons;
-    document.getElementById('a_img1').value = item.imgs[0]; document.getElementById('a_img2').value = item.imgs[1]; document.getElementById('a_img3').value = item.imgs[2];
-    document.getElementById('a_notes').value = item.notes;
-    refreshTagChips(); updateVisual();
-  } else if(type === 'style') {
-    const item = styles.find(x => x.id === id);
-    document.getElementById('modalStyle').classList.remove('hidden');
-    document.getElementById('s_title').value = item.title;
-    document.getElementById('s_pos').value = item.pos;
-    document.getElementById('s_img1').value = item.imgs[0]; document.getElementById('s_img2').value = item.imgs[1]; document.getElementById('s_img3').value = item.imgs[2];
-  } else if(type === 'prompt') {
-    const item = prompts.find(x => x.id === id);
-    document.getElementById('modalPrompt').classList.remove('hidden');
-    document.getElementById('p_word').value = item.word;
-    document.getElementById('p_desc').value = item.desc || '';
-    document.getElementById('p_main_cat').innerHTML = promptCategories.map(c => `<option value="${c.name}" ${c.name===item.category?'selected':''}>${c.name}</option>`).join('');
-    updateSubCatSelect();
-    document.getElementById('p_sub_cat').value = item.subCategory || '';
-    document.getElementById('p_image').value = item.image || '';
-    const label = document.querySelector('label[for="p_img_file"]');
-    if(item.image) { label.textContent = "이미지 포함됨"; label.classList.add('!border-blue-500', '!text-blue-500'); }
-  } else if(type === 'research') {
-    const item = researches.find(x => x.id === id);
-    document.getElementById('modalResearch').classList.remove('hidden');
-    document.getElementById('r_title').value = item.title;
-    document.getElementById('r_category').innerHTML = researchCategories.map(c => `<option value="${c}" ${c===item.category?'selected':''}>${c}</option>`).join('');
-    document.getElementById('r_prompt').value = item.prompt;
-    document.getElementById('r_desc').value = item.desc;
-    document.getElementById('r_image').value = item.image;
-  }
-}
-
-function del(type, id) { if(!confirm('정말 삭제하시겠습니까?')) return; if(type === 'artist') artists = artists.filter(x => x.id !== id); else if(type === 'style') styles = styles.filter(x => x.id !== id); else if(type === 'prompt') prompts = prompts.filter(x => x.id !== id); else if(type === 'research') researches = researches.filter(x => x.id !== id); syncAll(); renderList(); }
-
-function addItem() {
-  editId = null; const mods = [document.getElementById('modalArtist'), document.getElementById('modalStyle'), document.getElementById('modalPrompt'), document.getElementById('modalResearch')];
-  const mod = mods[currentTab]; if(!mod) return;
-  mod.querySelectorAll('input, textarea').forEach(i => i.value = '');
-  mod.querySelectorAll('.file-input-label').forEach(l => { l.textContent = "컴퓨터 내 파일 첨부"; l.classList.remove('!border-blue-500', '!text-blue-500', '!bg-blue-50'); });
-  if(currentTab === 2) {
-      document.getElementById('p_main_cat').innerHTML = promptCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-      updateSubCatSelect();
-  }
-  if(currentTab === 3) document.getElementById('r_category').innerHTML = researchCategories.map(c => `<option value="${c}">${c}</option>`).join('');
-  mod.classList.remove('hidden'); if(currentTab === 0) { refreshTagChips(); updateVisual(); }
-}
-
-function refreshTagChips() {
-  const pool = document.getElementById('a_tag_pool'); if(!pool) return;
-  const current = document.getElementById('a_tags').value.split(',').map(t => t.trim());
-  pool.innerHTML = artistCommonTags.map(t => `<span onclick="toggleArtTagInEdit('${t}')" class="tag-chip text-[10px] px-3 py-1.5 rounded-full ${current.includes(t) ? 'active bg-blue-500 text-white shadow-sm' : 'bg-white dark:bg-slate-700 text-slate-500'} font-bold">${t}</span>`).join('');
-}
-function toggleArtTagInEdit(t) {
-  const input = document.getElementById('a_tags');
-  let current = input.value.split(',').map(x => x.trim()).filter(x => x);
-  if(current.includes(t)) current = current.filter(x => x !== t); else current.push(t);
-  input.value = current.join(', '); refreshTagChips();
-}
-
-function updateVisual() { ['line','color','stab','cons'].forEach(f => { const el = document.getElementById('vis_'+f); if(!el) return; const val = document.getElementById('a_'+f).value; el.textContent = (f === 'line' || f === 'color') ? getIndicator(val) : getIndicator(val, 'star'); }); }
-function addToBuilder(type, id) { let item; if(type === 'artist') item = artists.find(x => x.id === id); else if(type === 'style') item = styles.find(x => x.id === id); else if(type === 'research') item = researches.find(x => x.id === id); if(!item) return; let p = (type === 'artist') ? `(1.2)::(${item.name})::` : (type === 'style' ? item.pos : item.prompt); document.getElementById('positive').value += (document.getElementById('positive').value ? ', ' : '') + p; }
-function toggleDarkMode() { const isDark = document.documentElement.classList.toggle('dark'); localStorage.setItem('dark-mode', isDark ? 'enabled' : 'disabled'); }
-function getIndicator(val, type) { const v = Number(val || 3); return type === 'star' ? '★'.repeat(v) + '☆'.repeat(5-v) : '■'.repeat(v) + '□'.repeat(5-v); }
-function toggleBuilder() { builderVisible = !builderVisible; document.getElementById('builder-panel').classList.toggle('hidden', !builderVisible); }
-function closeModal() { document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')); }
-function copyPositive() { navigator.clipboard.writeText(document.getElementById('positive').value); alert('Positive Prompt 복사됨'); }
-function clearBuilder() { if(confirm('빌더를 비우시겠습니까?')) { document.getElementById('positive').value = ''; document.getElementById('negative').value = ''; } }
-
-// --- 데이터 백업 ---
-async function exportData() { const d={artists,styles,prompts,researches,artistCommonTags,promptCategories,researchCategories}; const blob=new Blob([JSON.stringify(d, null, 2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`NAI_LAB_FULL_BACKUP.json`; a.click(); }
-function exportSingle(type) { let d = {}; if(type==='artists') d={artists}; else if(type==='prompts') d={prompts,promptCategories}; else if(type==='styles') d={styles}; else if(type==='researches') d={researches,researchCategories}; const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`NAI_${type.toUpperCase()}.json`; a.click(); }
-function importSingle(type) {
-  const input=document.createElement('input'); input.type='file'; input.accept='.json';
-  input.onchange=e=>{
-    const reader=new FileReader();
-    reader.onload=async ev=>{
-      try{
-        const d=JSON.parse(ev.target.result); let count=0;
-        if(type==='artists' && d.artists) d.artists.forEach(x=>{if(!artists.find(y=>y.id===x.id)){artists.push(x);count++;}});
-        else if(type==='prompts' && d.prompts) { d.prompts.forEach(x=>{if(!prompts.find(y=>y.id===x.id)){prompts.push(x);count++;}}); if(d.promptCategories) promptCategories = d.promptCategories; }
-        else if(type==='styles' && d.styles) d.styles.forEach(x=>{if(!styles.find(y=>y.id===x.id)){styles.push(x);count++;}});
-        else if(type==='researches' && d.researches) d.researches.forEach(x=>{if(!researches.find(y=>y.id===x.id)){researches.push(x);count++;}});
-        await syncAll(); alert(count+'개 항목 병합 성공'); location.reload();
-      }catch(e){alert('잘못된 파일 형식입니다.');}
-    }; reader.readAsText(e.target.files[0]);
-  }; input.click();
-}
-
-// --- 아티스트 믹서 ---
-function renderMixer(cont) { cont.innerHTML = `<div class="max-w-4xl mx-auto space-y-8 fade-in"><div class="bg-white dark:bg-slate-800 rounded-[2.5rem] p-10 shadow-xl border dark:border-slate-700"><h3 class="text-3xl font-black text-center text-fuchsia-600 mb-8 uppercase tracking-widest">Artist Mixer</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 text-xs"><div class="space-y-6"><p class="font-bold text-slate-400 uppercase">능력치 필터</p>${['line','color','stab','cons'].map(f => `<div class="flex items-center gap-4"><label class="w-12 font-black">${f.toUpperCase()}</label><input id="mix_min_${f}" type="number" min="1" max="5" value="1" class="w-10 border rounded text-center p-1"> ~ <input id="mix_max_${f}" type="number" min="1" max="5" value="5" class="w-10 border rounded text-center p-1"></div>`).join('')}</div><div class="space-y-4"><p class="font-bold text-slate-400 uppercase">속성 필터 (작가 태그)</p><input id="mix_tag_filter" placeholder="예: 실사" class="w-full border p-3 rounded-xl text-xs"><div class="grid grid-cols-2 gap-4 mt-2"><div><label class="opacity-50 block mb-1 font-bold">MIN WEIGHT</label><input id="mix_min" type="number" step="0.1" value="0.8" class="w-full border p-2 rounded-xl"></div><div><label class="opacity-50 block mb-1 font-bold">MAX WEIGHT</label><input id="mix_max" type="number" step="0.1" value="1.2" class="w-full border p-2 rounded-xl"></div></div></div></div><button onclick="generateMix()" class="w-full py-4 bg-fuchsia-600 text-white rounded-2xl font-black text-lg shadow-lg">랜덤 믹스 생성 🎲</button></div><div id="mix_results" class="grid grid-cols-1 gap-4"></div></div>`; }
-function generateMix() {
-  const tagFilter = document.getElementById('mix_tag_filter').value.trim().toLowerCase();
-  const filtered = artists.filter(a => {
-    const meetTag = !tagFilter || (a.tags && a.tags.toLowerCase().includes(tagFilter));
-    const meetL = a.line >= parseInt(document.getElementById('mix_min_line').value) && a.line <= parseInt(document.getElementById('mix_max_line').value);
-    const meetC = a.color >= parseInt(document.getElementById('mix_min_color').value) && a.color <= parseInt(document.getElementById('mix_max_color').value);
-    const meetS = a.stab >= parseInt(document.getElementById('mix_min_stab').value) && a.stab <= parseInt(document.getElementById('mix_max_stab').value);
-    const meetCo = a.cons >= parseInt(document.getElementById('mix_min_cons').value) && a.cons <= parseInt(document.getElementById('mix_max_cons').value);
-    return meetTag && meetL && meetC && meetS && meetCo;
-  });
-  if(filtered.length === 0) return alert('조건을 만족하는 작가가 없습니다.');
-  const min = parseFloat(document.getElementById('mix_min').value), max = parseFloat(document.getElementById('mix_max').value);
-  const res = document.getElementById('mix_results'); res.innerHTML = '';
-  for(let i=0; i<3; i++) {
-    let mixArr = [];
-    for(let j=0; j<3; j++) {
-      const a = filtered[Math.floor(Math.random()*filtered.length)];
-      const w = (Math.random()*(max-min)+min).toFixed(2);
-      mixArr.push(`(${w})::(${a.name})::`);
+    editId = id;
+    if(type === 'artist') {
+        const a = artists.find(x => x.id === id);
+        document.getElementById('modalArtist').classList.remove('hidden');
+        document.getElementById('a_name').value = a.name; document.getElementById('a_danbooru').value = a.danbooru;
+        document.getElementById('a_tags').value = a.tags; document.getElementById('a_notes').value = a.notes;
+        document.getElementById('a_img1').value = a.imgs[0]; document.getElementById('a_img2').value = a.imgs[1]; document.getElementById('a_img3').value = a.imgs[2];
+        document.getElementById('a_line').value = a.line; document.getElementById('a_color').value = a.color;
+        document.getElementById('a_stab').value = a.stab; document.getElementById('a_cons').value = a.cons;
+        renderArtistTagPool(); updateVisual();
+    } else if(type === 'style') {
+        const s = styles.find(x => x.id === id);
+        document.getElementById('modalStyle').classList.remove('hidden');
+        document.getElementById('s_title').value = s.title; document.getElementById('s_pos').value = s.pos;
+        document.getElementById('s_img1').value = s.imgs[0]; document.getElementById('s_img2').value = s.imgs[1]; document.getElementById('s_img3').value = s.imgs[2];
+    } else if(type === 'prompt') {
+        const p = prompts.find(x => x.id === id);
+        document.getElementById('modalPrompt').classList.remove('hidden');
+        document.getElementById('p_word').value = p.word; document.getElementById('p_desc').value = p.desc;
+        renderPromptCatSelects();
+        document.getElementById('p_main_cat').value = p.mainCat; updateSubCatSelect();
+        document.getElementById('p_sub_cat').value = p.subCat;
+        document.getElementById('p_image').value = p.image;
+    } else if(type === 'research') {
+        const r = researches.find(x => x.id === id);
+        document.getElementById('modalResearch').classList.remove('hidden');
+        const catS = document.getElementById('r_category');
+        catS.innerHTML = researchCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+        document.getElementById('r_title').value = r.title; document.getElementById('r_category').value = r.category;
+        document.getElementById('r_prompt').value = r.prompt; document.getElementById('r_desc').value = r.desc;
+        document.getElementById('r_image').value = r.image;
     }
-    const str = mixArr.join(' ');
-    const div = document.createElement('div'); div.className = 'bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700 cursor-pointer hover:border-fuchsia-500 shadow-sm transition-all';
-    div.innerHTML = `<div class="font-mono text-xs break-all leading-relaxed">${str}</div><div class="mt-2 text-[9px] font-bold text-fuchsia-400">CLICK TO ADD BUILDER</div>`;
-    div.onclick = () => { document.getElementById('positive').value += (document.getElementById('positive').value ? ', ' : '') + str; alert('믹스가 추가되었습니다.'); };
-    res.appendChild(div);
+}
+
+function del(type, id) {
+    if(!confirm('정말 삭제하시겠습니까?')) return;
+    if(type === 'artist') artists = artists.filter(x => x.id !== id);
+    else if(type === 'style') styles = styles.filter(x => x.id !== id);
+    else if(type === 'prompt') prompts = prompts.filter(x => x.id !== id);
+    else if(type === 'research') researches = researches.filter(x => x.id !== id);
+    syncAll(); renderList();
+}
+
+function closeModal() {
+    document.querySelectorAll('[id^="modal"]').forEach(m => m.classList.add('hidden'));
+}
+
+function addToBuilder(word) {
+    const pos = document.getElementById('positive');
+    pos.value = pos.value ? pos.value + ", " + word : word;
+}
+
+function toggleBuilder() {
+    const panel = document.getElementById('builder-panel');
+    panel.classList.toggle('hidden');
+}
+
+function copyPositive() {
+    const val = document.getElementById('positive').value;
+    navigator.clipboard.writeText(val).then(() => alert('복사되었습니다.'));
+}
+
+function clearBuilder() {
+    document.getElementById('positive').value = '';
+    document.getElementById('negative').value = '';
+}
+
+function renderMixer() {
+    const cont = document.getElementById('content');
+    cont.className = "max-w-4xl mx-auto w-full space-y-8";
+    cont.innerHTML = `
+      <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl border dark:border-slate-700 shadow-sm">
+        <h3 class="text-xl font-black mb-6 flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles text-fuchsia-500"></i> 아티스트 믹서</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div class="space-y-4">
+            <label class="text-xs font-bold text-slate-400">태그 필터</label>
+            <select id="mix_tag" class="w-full border rounded-xl p-3 text-sm">
+                <option value="all">모든 태그</option>
+                ${artistCommonTags.map(t => `<option value="${t}">${t}</option>`).join('')}
+            </select>
+          </div>
+          <div class="space-y-4">
+            <label class="text-xs font-bold text-slate-400">가중치 랜덤 범위</label>
+            <div class="flex items-center gap-2">
+                <input id="mix_min" type="number" step="0.1" value="0.5" class="w-full border rounded-xl p-3 text-sm text-center">
+                <span>~</span>
+                <input id="mix_max" type="number" step="0.1" value="1.5" class="w-full border rounded-xl p-3 text-sm text-center">
+            </div>
+          </div>
+        </div>
+        <button onclick="generateMix()" class="w-full py-4 bg-gradient-to-r from-blue-600 to-fuchsia-600 text-white rounded-2xl font-black shadow-lg">조합 생성하기</button>
+      </div>
+      <div id="mix_results" class="grid grid-cols-1 gap-4"></div>
+    `;
+}
+
+function generateMix() {
+    const tag = document.getElementById('mix_tag').value;
+    const filtered = artists.filter(a => tag === 'all' || (a.tags && a.tags.includes(tag)));
+    if(filtered.length < 3) return alert('조건을 만족하는 작가가 최소 3명 이상 필요합니다.');
+
+    const min = parseFloat(document.getElementById('mix_min').value);
+    const max = parseFloat(document.getElementById('mix_max').value);
+    const res = document.getElementById('mix_results'); res.innerHTML = '';
+
+    for(let i=0; i<3; i++) {
+        let mixArr = [];
+        let tempArr = [...filtered].sort(() => 0.5 - Math.random());
+        for(let j=0; j<3; j++) {
+            const w = (Math.random() * (max - min) + min).toFixed(2);
+            mixArr.push(`{${tempArr[j].name}:${w}}`);
+        }
+        const str = mixArr.join(', ');
+        const div = document.createElement('div');
+        div.className = 'bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700 cursor-pointer hover:border-fuchsia-500 shadow-sm transition-all';
+        div.innerHTML = `<div class="font-mono text-xs break-all leading-relaxed">${str}</div><div class="mt-2 text-[8px] text-slate-400 font-bold uppercase">Click to Copy</div>`;
+        div.onclick = () => { navigator.clipboard.writeText(str); alert('클립보드에 복사되었습니다.'); };
+        res.appendChild(div);
+    }
+}
+
+function renderSettings() {
+    const cont = document.getElementById('content');
+    cont.className = "max-w-4xl mx-auto w-full space-y-6";
+    cont.innerHTML = `
+      <div class="bg-white dark:bg-slate-800 rounded-3xl border dark:border-slate-700 p-10 shadow-sm">
+        <h2 class="text-3xl font-black mb-8">시스템 설정</h2>
+        <div class="space-y-10">
+          <section>
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Display Mode</h3>
+            <div class="flex gap-4">
+              <button onclick="setDarkMode(false)" class="flex-1 py-4 rounded-2xl border-2 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">라이트 모드</button>
+              <button onclick="setDarkMode(true)" class="flex-1 py-4 rounded-2xl border-2 font-bold dark:border-blue-500 transition-all">다크 모드</button>
+            </div>
+          </section>
+          <section class="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed">
+            <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest mb-4">Data Backup & Restore</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button onclick="exportFullData()" class="py-3 bg-blue-600 text-white rounded-xl font-bold">전체 데이터 내보내기 (JSON)</button>
+              <div>
+                  <label class="block py-3 bg-emerald-600 text-white rounded-xl font-bold text-center cursor-pointer">
+                    데이터 가져오기
+                    <input type="file" id="import-file" class="hidden" onchange="handleFileImport(event)">
+                  </label>
+              </div>
+            </div>
+            <p class="mt-4 text-[10px] text-slate-400 text-center">불러온 데이터가 중복되거나 손상될까 걱정되시나요? 카테고리별 관리 기능을 활용해 보세요.</p>
+          </section>
+        </div>
+      </div>
+    `;
+}
+
+function setDarkMode(isDark) {
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('dark-mode', 'enabled');
+  } else {
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('dark-mode', 'disabled');
   }
+}
+
+function exportFullData() {
+    const data = { artists, styles, prompts, researches, artistCommonTags, promptCategories, researchCategories };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `NAI_Lab_Full_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+}
+
+function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            
+            // 데이터 유형 확인 (전체 백업 vs 카테고리 부분 백업)
+            let message = "데이터를 어떻게 불러올까요?\n\n[확인]: 기존 데이터에 추가하기\n[취소]: 기존 데이터 지우고 새로 교체하기";
+            const isAppend = confirm(message);
+
+            if(imported.type === "NAI_PROMPT_PARTIAL") {
+                // 부분 데이터 (프롬프트만)
+                if(!isAppend) prompts = [];
+                prompts = [...prompts, ...imported.data];
+            } else {
+                // 전체 데이터
+                if(!isAppend) {
+                    artists = imported.artists || [];
+                    styles = imported.styles || [];
+                    prompts = imported.prompts || [];
+                    researches = imported.researches || [];
+                } else {
+                    artists = [...artists, ...(imported.artists || [])];
+                    styles = [...styles, ...(imported.styles || [])];
+                    prompts = [...prompts, ...(imported.prompts || [])];
+                    researches = [...researches, ...(imported.researches || [])];
+                }
+            }
+            
+            syncAll();
+            alert('데이터를 성공적으로 불러왔습니다.');
+            location.reload();
+        } catch (err) {
+            alert('유효하지 않은 파일입니다.');
+        }
+    };
+    reader.readAsText(file);
 }
 </script>
 </body>
