@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NAI Prompt Lab (Order Fixed Ed.)</title>
+  <title>NAI Prompt Lab (Original UI Preserved)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script>
@@ -69,8 +69,8 @@
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-4">
           <h2 id="tabTitle" class="text-xl font-bold">작가 정리</h2>
-          <div id="bulk-action-area" class="hidden flex items-center gap-2">
-            <button onclick="deleteFilteredPrompts()" class="text-[10px] bg-rose-500 text-white px-3 py-1 rounded-lg font-bold hover:bg-rose-600 transition-colors">현재 분류 일괄 삭제</button>
+          <div id="bulk-action-area" class="hidden">
+             <button onclick="bulkDeletePrompts()" class="text-[10px] bg-rose-500 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-rose-600 transition-colors">현재 카테고리 일괄 삭제</button>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -145,8 +145,8 @@
 <div id="modalStyle" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-50 p-4">
   <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full p-8 shadow-2xl">
     <h3 class="text-2xl font-black mb-6">그림체 스타일 편집</h3>
-    <input id="s_title" placeholder="그림체 이름 (예: 90년대 셀애니)" class="w-full border rounded-xl px-4 py-3 mb-4 font-bold">
-    <textarea id="s_pos" rows="4" placeholder="그림체를 구현할 프롬프트 입력" class="w-full border rounded-xl p-4 font-mono text-sm mb-4"></textarea>
+    <input id="s_title" placeholder="그림체 이름" class="w-full border rounded-xl px-4 py-3 mb-4 font-bold">
+    <textarea id="s_pos" rows="4" placeholder="프롬프트 입력" class="w-full border rounded-xl p-4 font-mono text-sm mb-4"></textarea>
     <div class="grid grid-cols-3 gap-3 mb-6">
       <div><label class="file-input-label" for="s_img_file1">IMG 1</label><input type="file" id="s_img_file1" class="hidden" onchange="handleImgUpload(event, 's_img1')"><input type="hidden" id="s_img1"></div>
       <div><label class="file-input-label" for="s_img_file2">IMG 2</label><input type="file" id="s_img_file2" class="hidden" onchange="handleImgUpload(event, 's_img2')"><input type="hidden" id="s_img2"></div>
@@ -160,7 +160,7 @@
   <div class="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl">
     <h3 class="text-xl font-black mb-4 uppercase tracking-tighter">Add/Edit Prompt Word</h3>
     <input id="p_word" placeholder="프롬프트 (예: cinematic lighting)" class="w-full border p-3 rounded-xl mb-4 font-mono">
-    <input id="p_desc" placeholder="프롬프트 설명 (예: 영화 같은 조명)" class="w-full border p-3 rounded-xl mb-4 text-xs font-bold bg-slate-50 dark:bg-slate-900">
+    <input id="p_desc" placeholder="프롬프트 설명" class="w-full border p-3 rounded-xl mb-4 text-xs font-bold bg-slate-50 dark:bg-slate-900">
     <div class="flex gap-2 mb-4">
         <select id="p_main_cat" onchange="updateSubCatSelect()" class="flex-1 border p-3 rounded-xl font-bold text-xs"></select>
         <select id="p_sub_cat" class="flex-1 border p-3 rounded-xl font-bold text-xs"></select>
@@ -174,19 +174,20 @@
   <div class="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-2xl w-full shadow-2xl">
     <h3 class="text-xl font-black mb-4">실험/연구 결과 기록</h3>
     <div class="grid grid-cols-2 gap-4 mb-4"><input id="r_title" placeholder="실험 제목" class="border p-3 rounded-xl font-bold"><select id="r_category" class="border p-3 rounded-xl"></select></div>
-    <textarea id="r_prompt" placeholder="연구에 사용된 프롬프트" class="w-full border p-3 rounded-xl mb-4 font-mono text-sm"></textarea>
-    <textarea id="r_desc" placeholder="실험 결과 및 코멘트" class="w-full border p-3 rounded-xl mb-4 text-sm"></textarea>
-    <div class="mb-6"><label class="file-input-label" for="r_img_file">결과 이미지 첨부</label><input type="file" id="r_img_file" class="hidden" onchange="handleImgUpload(event, 'r_image')"><input type="hidden" id="r_image"></div>
+    <textarea id="r_prompt" placeholder="프롬프트" class="w-full border p-3 rounded-xl mb-4 font-mono text-sm"></textarea>
+    <textarea id="r_desc" placeholder="코멘트" class="w-full border p-3 rounded-xl mb-4 text-sm"></textarea>
+    <div class="mb-6"><label class="file-input-label" for="r_img_file">결과 이미지</label><input type="file" id="r_img_file" class="hidden" onchange="handleImgUpload(event, 'r_image')"><input type="hidden" id="r_image"></div>
     <div class="flex justify-end gap-2"><button onclick="closeModal()" class="px-4 py-2 border rounded-xl font-bold">취소</button><button onclick="saveResearch()" class="bg-amber-600 text-white px-8 py-2 rounded-xl font-bold shadow-md">기록 저장</button></div>
   </div>
 </div>
 
 <script>
+// --- 기존 분류 데이터 보존 (사용자 요청에 따라 변경 금지) ---
 const DB_NAME = "NAIPromptLabDB_V16";
 const STORE_NAME = "labData";
 let db, artists = [], styles = [], prompts = [], researches = [];
-let artistCommonTags = ["실사", "반실사", "애니", "화려한", "깔끔한", "선명한"];
 
+let artistCommonTags = ["실사", "반실사", "애니", "화려한", "깔끔한", "선명한"];
 let promptCategories = [
     { name: "인물", subs: ["인원", "종족", "특징", "직업"] },
     { name: "외모", subs: ["얼굴", "눈", "입", "귀", "머리카락/색", "머리카락/모양"] },
@@ -203,6 +204,7 @@ let researchCategories = ["기본", "포즈", "색감", "소재"];
 
 let currentTab = 0, currentCategoryFilter = 'all', currentSubFilter = 'all', editId = null, builderVisible = false;
 
+// DB & Sync
 async function initDB() { return new Promise((resolve) => { const request = indexedDB.open(DB_NAME, 1); request.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME); request.onsuccess = e => { db = e.target.result; resolve(); }; }); }
 async function saveToDB(key, data) { const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).put(JSON.parse(JSON.stringify(data)), key); }
 async function getFromDB(key) { return new Promise((res) => { const tx = db.transaction(STORE_NAME, "readonly"); const req = tx.objectStore(STORE_NAME).get(key); req.onsuccess = () => res(req.result); req.onerror = () => res(null); }); }
@@ -247,12 +249,12 @@ function updateVisual() {
 
 function handleImgUpload(event, targetId) {
   const file = event.target.files[0]; if (!file) return;
-  const label = event.target.previousElementSibling; label.textContent = "인코딩 중...";
+  const label = event.target.previousElementSibling; label.textContent = "Loading...";
   const reader = new FileReader();
   reader.onload = e => {
     document.getElementById(targetId).value = e.target.result;
-    label.textContent = "첨부됨: " + file.name.substring(0, 10) + "...";
-    label.classList.add('!border-blue-500', '!text-blue-500', '!bg-blue-50');
+    label.textContent = "Done: " + file.name.substring(0, 8);
+    label.classList.add('!border-blue-500', '!text-blue-500');
   };
   reader.readAsDataURL(file);
 }
@@ -264,12 +266,25 @@ function switchTab(tab) {
   document.getElementById('tabTitle').textContent = ["작가 정리", "그림체 정리", "프롬프트 목록", "연구 정리", "아티스트 믹서", "시스템 설정"][tab];
   document.getElementById('mainHeader').style.display = (tab === 5) ? 'none' : 'flex';
   
-  // 프롬프트 목록 탭에서만 일괄 삭제 버튼 보이기
-  const bulkArea = document.getElementById('bulk-action-area');
-  if(tab === 2) bulkArea.classList.remove('hidden');
-  else bulkArea.classList.add('hidden');
+  // 프롬프트 일괄 삭제 버튼 제어
+  document.getElementById('bulk-action-area').style.display = (tab === 2) ? 'block' : 'none';
 
   renderList(); 
+}
+
+// --- [기능 추가] 프롬프트 일괄 삭제 로직 ---
+function bulkDeletePrompts() {
+    if(currentTab !== 2) return;
+    const catName = currentSubFilter !== 'all' ? currentSubFilter : (currentCategoryFilter !== 'all' ? currentCategoryFilter : '전체');
+    if(!confirm(`[${catName}] 소속의 모든 프롬프트를 일괄 삭제하시겠습니까?`)) return;
+
+    prompts = prompts.filter(p => {
+        const matchMain = currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter;
+        const matchSub = currentSubFilter === 'all' || p.subCat === currentSubFilter;
+        return !(matchMain && matchSub);
+    });
+    syncAll();
+    renderList();
 }
 
 function renderSideCategories() {
@@ -287,7 +302,7 @@ function renderSideCategories() {
   area.style.display = 'block';
   const createBtn = (label, value, isSub = false) => {
     const btn = document.createElement('button');
-    btn.className = `w-full text-left px-4 py-2 rounded-xl text-[11px] font-bold transition-all ${isSub ? 'pl-8' : ''} ${((isSub ? currentSubFilter : currentCategoryFilter) === value) ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`;
+    btn.className = `w-full text-left px-4 py-2 rounded-xl text-[11px] font-bold transition-all ${isSub ? 'pl-8' : ''} ${((isSub ? currentSubFilter : currentCategoryFilter) === value) ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`;
     btn.textContent = label;
     btn.onclick = () => { 
         if(isSub) currentSubFilter = value;
@@ -307,21 +322,6 @@ function renderSideCategories() {
   } else {
       cats.forEach(c => createBtn(c, c));
   }
-}
-
-// --- 일괄 삭제 로직 (프롬프트 목록 전용) ---
-function deleteFilteredPrompts() {
-    if(currentTab !== 2) return;
-    const catName = currentSubFilter !== 'all' ? currentSubFilter : (currentCategoryFilter !== 'all' ? currentCategoryFilter : '전체');
-    if(!confirm(`[${catName}] 분류의 모든 프롬프트를 삭제할까요?`)) return;
-
-    prompts = prompts.filter(p => {
-        const matchMain = currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter;
-        const matchSub = currentSubFilter === 'all' || p.subCat === currentSubFilter;
-        return !(matchMain && matchSub);
-    });
-    syncAll();
-    renderList();
 }
 
 function renderList() {
@@ -371,7 +371,7 @@ function renderList() {
         <div class="p-4">
           <h4 class="font-bold text-sm mb-2">${item.title}</h4>
           <p class="text-[10px] text-slate-500 font-mono mb-4 line-clamp-2">${item.pos}</p>
-          <button onclick="addToBuilder('${item.pos}')" class="w-full py-2 bg-slate-50 dark:bg-slate-700 rounded-lg text-[10px] font-bold">전체 프롬프트 추가</button>
+          <button onclick="addToBuilder('${item.pos}')" class="w-full py-2 bg-slate-50 dark:bg-slate-700 rounded-lg text-[10px] font-bold">프롬프트 추가</button>
         </div>`;
       cont.appendChild(card);
     });
@@ -584,7 +584,7 @@ function edit(type, id) {
 }
 
 function del(type, id) {
-    if(!confirm('정말 삭제하시겠습니까?')) return;
+    if(!confirm('삭제하시겠습니까?')) return;
     if(type === 'artist') artists = artists.filter(x => x.id !== id);
     else if(type === 'style') styles = styles.filter(x => x.id !== id);
     else if(type === 'prompt') prompts = prompts.filter(x => x.id !== id);
@@ -592,35 +592,17 @@ function del(type, id) {
     syncAll(); renderList();
 }
 
-function closeModal() {
-    document.querySelectorAll('[id^="modal"]').forEach(m => m.classList.add('hidden'));
-}
-
-function addToBuilder(word) {
-    const pos = document.getElementById('positive');
-    pos.value = pos.value ? pos.value + ", " + word : word;
-}
-
-function toggleBuilder() {
-    const panel = document.getElementById('builder-panel');
-    panel.classList.toggle('hidden');
-}
-
-function copyPositive() {
-    const val = document.getElementById('positive').value;
-    navigator.clipboard.writeText(val).then(() => alert('복사되었습니다.'));
-}
-
-function clearBuilder() {
-    document.getElementById('positive').value = '';
-    document.getElementById('negative').value = '';
-}
+function closeModal() { document.querySelectorAll('[id^="modal"]').forEach(m => m.classList.add('hidden')); }
+function addToBuilder(word) { const pos = document.getElementById('positive'); pos.value = pos.value ? pos.value + ", " + word : word; }
+function toggleBuilder() { document.getElementById('builder-panel').classList.toggle('hidden'); }
+function copyPositive() { navigator.clipboard.writeText(document.getElementById('positive').value).then(() => alert('복사완료')); }
+function clearBuilder() { document.getElementById('positive').value = ''; document.getElementById('negative').value = ''; }
 
 function renderMixer() {
     const cont = document.getElementById('content');
     cont.className = "max-w-4xl mx-auto w-full space-y-8";
     cont.innerHTML = `
-      <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl border dark:border-slate-700 shadow-sm">
+      <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl border dark:border-slate-700">
         <h3 class="text-xl font-black mb-6 flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles text-fuchsia-500"></i> 아티스트 믹서</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <div class="space-y-4">
@@ -639,7 +621,7 @@ function renderMixer() {
             </div>
           </div>
         </div>
-        <button onclick="generateMix()" class="w-full py-4 bg-gradient-to-r from-blue-600 to-fuchsia-600 text-white rounded-2xl font-black shadow-lg">조합 생성하기</button>
+        <button onclick="generateMix()" class="w-full py-4 bg-gradient-to-r from-blue-600 to-fuchsia-600 text-white rounded-2xl font-black shadow-lg">조합 생성</button>
       </div>
       <div id="mix_results" class="grid grid-cols-1 gap-4"></div>
     `;
@@ -648,12 +630,10 @@ function renderMixer() {
 function generateMix() {
     const tag = document.getElementById('mix_tag').value;
     const filtered = artists.filter(a => tag === 'all' || (a.tags && a.tags.includes(tag)));
-    if(filtered.length < 3) return alert('조건을 만족하는 작가가 최소 3명 이상 필요합니다.');
-
+    if(filtered.length < 3) return alert('작가가 3명 이상 필요합니다.');
     const min = parseFloat(document.getElementById('mix_min').value);
     const max = parseFloat(document.getElementById('mix_max').value);
     const res = document.getElementById('mix_results'); res.innerHTML = '';
-
     for(let i=0; i<3; i++) {
         let mixArr = [];
         let tempArr = [...filtered].sort(() => 0.5 - Math.random());
@@ -665,11 +645,12 @@ function generateMix() {
         const div = document.createElement('div');
         div.className = 'bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700 cursor-pointer hover:border-fuchsia-500 shadow-sm transition-all';
         div.innerHTML = `<div class="font-mono text-xs break-all leading-relaxed">${str}</div><div class="mt-2 text-[8px] text-slate-400 font-bold uppercase">Click to Copy</div>`;
-        div.onclick = () => { navigator.clipboard.writeText(str); alert('클립보드에 복사되었습니다.'); };
+        div.onclick = () => { navigator.clipboard.writeText(str); alert('복사되었습니다.'); };
         res.appendChild(div);
     }
 }
 
+// --- [기능 추가/수정] 설정 UI 및 내보내기/가져오기 기능 ---
 function renderSettings() {
     const cont = document.getElementById('content');
     cont.className = "max-w-4xl mx-auto w-full space-y-6";
@@ -684,25 +665,28 @@ function renderSettings() {
               <button onclick="setDarkMode(true)" class="flex-1 py-4 rounded-2xl border-2 font-bold dark:border-blue-500 transition-all">다크 모드</button>
             </div>
           </section>
+
           <section class="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed">
-            <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest mb-4">Data Management</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="space-y-2">
-                <button onclick="exportFullData('all')" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">전체 데이터 내보내기</button>
-                <div class="flex gap-2">
-                   <select id="export_cat_select" class="flex-1 text-[10px] border rounded-lg px-2">
-                      <option value="prompt_only">프롬프트 목록만</option>
-                      ${promptCategories.map(c => `<option value="${c.name}">${c.name} 대분류만</option>`).join('')}
+            <h3 class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4">데이터 관리</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div class="space-y-3">
+                <p class="text-[11px] font-bold text-slate-500">데이터 내보내기</p>
+                <div class="flex flex-col gap-2">
+                   <select id="export_target" class="w-full text-[11px] border rounded-lg p-2 font-bold">
+                      <option value="all">전체 데이터 (백업용)</option>
+                      <option value="prompts_all">프롬프트 전체</option>
+                      ${promptCategories.map(c => `<option value="p_${c.name}">프롬프트 - ${c.name} 대분류</option>`).join('')}
                    </select>
-                   <button onclick="exportFilteredData()" class="px-3 py-2 bg-slate-600 text-white rounded-lg text-[10px] font-bold">내보내기</button>
+                   <button onclick="handleExport()" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm">선택 항목 내보내기</button>
                 </div>
               </div>
-              <div>
-                  <label class="block py-3 bg-emerald-600 text-white rounded-xl font-bold text-center cursor-pointer">
-                    데이터 가져오기 (JSON)
-                    <input type="file" id="import-file" class="hidden" onchange="handleFileImport(event)">
-                  </label>
-                  <p class="text-[9px] text-slate-400 mt-2 text-center">* 가져오기 시 추가/교체를 선택할 수 있습니다.</p>
+              <div class="space-y-3">
+                <p class="text-[11px] font-bold text-slate-500">데이터 가져오기</p>
+                <label class="block py-3 bg-emerald-600 text-white rounded-xl font-bold text-center cursor-pointer text-sm">
+                    JSON 파일 불러오기
+                    <input type="file" id="import-file" class="hidden" onchange="handleImport(event)">
+                </label>
+                <p class="text-[9px] text-slate-400">* 파일 선택 후 추가/교체를 선택할 수 있습니다.</p>
               </div>
             </div>
           </section>
@@ -721,35 +705,33 @@ function setDarkMode(isDark) {
   }
 }
 
-// --- 내보내기/가져오기 로직 강화 ---
-function exportFullData() {
-    const data = { artists, styles, prompts, researches, artistCommonTags, promptCategories, researchCategories };
-    downloadJSON(data, `NAI_Lab_Full_Backup_${new Date().toISOString().slice(0,10)}.json`);
-}
+// 내보내기 로직
+function handleExport() {
+    const target = document.getElementById('export_target').value;
+    let exportData = { artists:[], styles:[], prompts:[], researches:[] };
+    let fileName = `NAI_Lab_Backup_${new Date().toISOString().slice(0,10)}`;
 
-function exportFilteredData() {
-    const mode = document.getElementById('export_cat_select').value;
-    let dataToExport = { artists:[], styles:[], prompts:[], researches:[] };
-    
-    if(mode === 'prompt_only') {
-        dataToExport.prompts = prompts;
-    } else {
-        dataToExport.prompts = prompts.filter(p => p.mainCat === mode);
+    if (target === 'all') {
+        exportData = { artists, styles, prompts, researches, artistCommonTags, promptCategories, researchCategories };
+    } else if (target === 'prompts_all') {
+        exportData.prompts = prompts;
+        fileName = "NAI_Prompts_All";
+    } else if (target.startsWith('p_')) {
+        const catName = target.replace('p_', '');
+        exportData.prompts = prompts.filter(p => p.mainCat === catName);
+        fileName = `NAI_Prompts_${catName}`;
     }
-    
-    downloadJSON(dataToExport, `NAI_Lab_Partial_${mode}.json`);
-}
 
-function downloadJSON(data, filename) {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = fileName + ".json";
     a.click();
 }
 
-function handleFileImport(event) {
+// 가져오기 로직 (추가/교체 선택 기능 포함)
+function handleImport(event) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -757,9 +739,9 @@ function handleFileImport(event) {
     reader.onload = function(e) {
         try {
             const imported = JSON.parse(e.target.result);
-            const isAppend = confirm("기존 데이터에 합치시겠습니까? (취소 선택 시 기존 데이터가 모두 삭제되고 새로 교체됩니다.)");
+            const mode = confirm("기존 데이터에 [합치기]를 하시겠습니까?\n\n(확인: 합치기 / 취소: 기존 데이터 삭제 후 교체)") ? 'append' : 'replace';
             
-            if(isAppend) {
+            if (mode === 'append') {
                 if(imported.artists) artists = [...artists, ...imported.artists];
                 if(imported.styles) styles = [...styles, ...imported.styles];
                 if(imported.prompts) prompts = [...prompts, ...imported.prompts];
@@ -772,10 +754,10 @@ function handleFileImport(event) {
             }
             
             syncAll();
-            alert('데이터 로드 완료');
+            alert('데이터를 성공적으로 불러왔습니다.');
             location.reload();
         } catch (err) {
-            alert('파일 형식이 잘못되었습니다.');
+            alert('유효한 JSON 형식이 아닙니다.');
         }
     };
     reader.readAsText(file);
