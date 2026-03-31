@@ -68,11 +68,10 @@
     <header id="mainHeader" class="bg-white dark:bg-slate-800 border-b dark:border-slate-700 px-8 py-4 flex flex-col gap-4">
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-4">
-            <h2 id="tabTitle" class="text-xl font-bold">작가 정리</h2>
-            <div id="bulk-action-area" class="hidden flex items-center gap-2 border-l pl-4 dark:border-slate-700">
-                <button onclick="exportFilteredPrompts()" class="text-[10px] font-bold px-2 py-1 bg-emerald-500 text-white rounded hover:bg-emerald-600">카테고리 내보내기</button>
-                <button onclick="deleteFilteredPrompts()" class="text-[10px] font-bold px-2 py-1 bg-rose-500 text-white rounded hover:bg-rose-600">카테고리 일괄삭제</button>
-            </div>
+          <h2 id="tabTitle" class="text-xl font-bold">작가 정리</h2>
+          <div id="bulk-action-area" class="hidden flex items-center gap-2">
+            <button onclick="deleteFilteredPrompts()" class="text-[10px] bg-rose-500 text-white px-3 py-1 rounded-lg font-bold hover:bg-rose-600 transition-colors">현재 분류 일괄 삭제</button>
+          </div>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="toggleBuilder()" class="header-btn bg-slate-600">빌더</button>
@@ -265,7 +264,7 @@ function switchTab(tab) {
   document.getElementById('tabTitle').textContent = ["작가 정리", "그림체 정리", "프롬프트 목록", "연구 정리", "아티스트 믹서", "시스템 설정"][tab];
   document.getElementById('mainHeader').style.display = (tab === 5) ? 'none' : 'flex';
   
-  // 프롬프트 목록 탭일 때만 일괄 작업 버튼 노출
+  // 프롬프트 목록 탭에서만 일괄 삭제 버튼 보이기
   const bulkArea = document.getElementById('bulk-action-area');
   if(tab === 2) bulkArea.classList.remove('hidden');
   else bulkArea.classList.add('hidden');
@@ -310,57 +309,28 @@ function renderSideCategories() {
   }
 }
 
-// --- 일괄 관리 기능 추가 ---
+// --- 일괄 삭제 로직 (프롬프트 목록 전용) ---
 function deleteFilteredPrompts() {
     if(currentTab !== 2) return;
-    const catText = currentCategoryFilter === 'all' ? '전체' : `${currentCategoryFilter}${currentSubFilter !== 'all' ? ' > ' + currentSubFilter : ''}`;
-    if(!confirm(`[${catText}] 카테고리의 모든 프롬프트를 삭제하시겠습니까?`)) return;
+    const catName = currentSubFilter !== 'all' ? currentSubFilter : (currentCategoryFilter !== 'all' ? currentCategoryFilter : '전체');
+    if(!confirm(`[${catName}] 분류의 모든 프롬프트를 삭제할까요?`)) return;
 
     prompts = prompts.filter(p => {
         const matchMain = currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter;
         const matchSub = currentSubFilter === 'all' || p.subCat === currentSubFilter;
         return !(matchMain && matchSub);
     });
-    
     syncAll();
     renderList();
-    alert('삭제되었습니다.');
 }
 
-function exportFilteredPrompts() {
-    if(currentTab !== 2) return;
-    const filtered = prompts.filter(p => {
-        const matchMain = currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter;
-        const matchSub = currentSubFilter === 'all' || p.subCat === currentSubFilter;
-        return matchMain && matchSub;
-    });
-
-    if(filtered.length === 0) return alert('내보낼 데이터가 없습니다.');
-
-    const data = {
-        type: "NAI_PROMPT_PARTIAL",
-        category: currentCategoryFilter,
-        subCategory: currentSubFilter,
-        data: filtered
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const filename = `NAI_Prompts_${currentCategoryFilter}_${currentSubFilter}.json`;
-    a.href = url;
-    a.download = filename;
-    a.click();
-}
-
-// --- 렌더링 함수 ---
 function renderList() {
   const query = document.getElementById('searchBar').value.toLowerCase();
   const cont = document.getElementById('content'); 
   cont.innerHTML = '';
   renderSideCategories();
 
-  if (currentTab === 0) { // 작가
+  if (currentTab === 0) { // Artist
     cont.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8";
     artists.filter(a => (a.name.toLowerCase().includes(query) || (a.tags && a.tags.toLowerCase().includes(query))) && (currentCategoryFilter === 'all' || (a.tags && a.tags.includes(currentCategoryFilter))))
     .forEach((item) => {
@@ -385,7 +355,7 @@ function renderList() {
         </div>`;
       cont.appendChild(card);
     });
-  } else if (currentTab === 1) { // 그림체
+  } else if (currentTab === 1) { // Style
     cont.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
     styles.filter(s => s.title.toLowerCase().includes(query)).forEach(item => {
       const card = document.createElement('div');
@@ -405,7 +375,7 @@ function renderList() {
         </div>`;
       cont.appendChild(card);
     });
-  } else if (currentTab === 2) { // 프롬프트
+  } else if (currentTab === 2) { // Prompt
     cont.className = "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4";
     prompts.filter(p => {
         const matchSearch = p.word.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query);
@@ -431,7 +401,7 @@ function renderList() {
         </div>`;
       cont.appendChild(card);
     });
-  } else if (currentTab === 3) { // 연구
+  } else if (currentTab === 3) { // Research
     cont.className = "grid grid-cols-1 gap-6";
     researches.filter(r => (r.title.toLowerCase().includes(query) || r.prompt.toLowerCase().includes(query)) && (currentCategoryFilter === 'all' || r.category === currentCategoryFilter))
     .forEach(item => {
@@ -461,14 +431,13 @@ function renderList() {
         </div>`;
       cont.appendChild(card);
     });
-  } else if (currentTab === 4) { // 믹서
+  } else if (currentTab === 4) {
     renderMixer();
-  } else if (currentTab === 5) { // 설정
+  } else if (currentTab === 5) {
     renderSettings();
   }
 }
 
-// --- 나머지 로직 (기존 기능 유지) ---
 function addItem() {
     editId = null;
     if(currentTab === 0) {
@@ -716,17 +685,26 @@ function renderSettings() {
             </div>
           </section>
           <section class="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed">
-            <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest mb-4">Data Backup & Restore</h3>
+            <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest mb-4">Data Management</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button onclick="exportFullData()" class="py-3 bg-blue-600 text-white rounded-xl font-bold">전체 데이터 내보내기 (JSON)</button>
+              <div class="space-y-2">
+                <button onclick="exportFullData('all')" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">전체 데이터 내보내기</button>
+                <div class="flex gap-2">
+                   <select id="export_cat_select" class="flex-1 text-[10px] border rounded-lg px-2">
+                      <option value="prompt_only">프롬프트 목록만</option>
+                      ${promptCategories.map(c => `<option value="${c.name}">${c.name} 대분류만</option>`).join('')}
+                   </select>
+                   <button onclick="exportFilteredData()" class="px-3 py-2 bg-slate-600 text-white rounded-lg text-[10px] font-bold">내보내기</button>
+                </div>
+              </div>
               <div>
                   <label class="block py-3 bg-emerald-600 text-white rounded-xl font-bold text-center cursor-pointer">
-                    데이터 가져오기
+                    데이터 가져오기 (JSON)
                     <input type="file" id="import-file" class="hidden" onchange="handleFileImport(event)">
                   </label>
+                  <p class="text-[9px] text-slate-400 mt-2 text-center">* 가져오기 시 추가/교체를 선택할 수 있습니다.</p>
               </div>
             </div>
-            <p class="mt-4 text-[10px] text-slate-400 text-center">불러온 데이터가 중복되거나 손상될까 걱정되시나요? 카테고리별 관리 기능을 활용해 보세요.</p>
           </section>
         </div>
       </div>
@@ -743,13 +721,31 @@ function setDarkMode(isDark) {
   }
 }
 
+// --- 내보내기/가져오기 로직 강화 ---
 function exportFullData() {
     const data = { artists, styles, prompts, researches, artistCommonTags, promptCategories, researchCategories };
+    downloadJSON(data, `NAI_Lab_Full_Backup_${new Date().toISOString().slice(0,10)}.json`);
+}
+
+function exportFilteredData() {
+    const mode = document.getElementById('export_cat_select').value;
+    let dataToExport = { artists:[], styles:[], prompts:[], researches:[] };
+    
+    if(mode === 'prompt_only') {
+        dataToExport.prompts = prompts;
+    } else {
+        dataToExport.prompts = prompts.filter(p => p.mainCat === mode);
+    }
+    
+    downloadJSON(dataToExport, `NAI_Lab_Partial_${mode}.json`);
+}
+
+function downloadJSON(data, filename) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `NAI_Lab_Full_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.download = filename;
     a.click();
 }
 
@@ -761,35 +757,25 @@ function handleFileImport(event) {
     reader.onload = function(e) {
         try {
             const imported = JSON.parse(e.target.result);
+            const isAppend = confirm("기존 데이터에 합치시겠습니까? (취소 선택 시 기존 데이터가 모두 삭제되고 새로 교체됩니다.)");
             
-            // 데이터 유형 확인 (전체 백업 vs 카테고리 부분 백업)
-            let message = "데이터를 어떻게 불러올까요?\n\n[확인]: 기존 데이터에 추가하기\n[취소]: 기존 데이터 지우고 새로 교체하기";
-            const isAppend = confirm(message);
-
-            if(imported.type === "NAI_PROMPT_PARTIAL") {
-                // 부분 데이터 (프롬프트만)
-                if(!isAppend) prompts = [];
-                prompts = [...prompts, ...imported.data];
+            if(isAppend) {
+                if(imported.artists) artists = [...artists, ...imported.artists];
+                if(imported.styles) styles = [...styles, ...imported.styles];
+                if(imported.prompts) prompts = [...prompts, ...imported.prompts];
+                if(imported.researches) researches = [...researches, ...imported.researches];
             } else {
-                // 전체 데이터
-                if(!isAppend) {
-                    artists = imported.artists || [];
-                    styles = imported.styles || [];
-                    prompts = imported.prompts || [];
-                    researches = imported.researches || [];
-                } else {
-                    artists = [...artists, ...(imported.artists || [])];
-                    styles = [...styles, ...(imported.styles || [])];
-                    prompts = [...prompts, ...(imported.prompts || [])];
-                    researches = [...researches, ...(imported.researches || [])];
-                }
+                artists = imported.artists || [];
+                styles = imported.styles || [];
+                prompts = imported.prompts || [];
+                researches = imported.researches || [];
             }
             
             syncAll();
-            alert('데이터를 성공적으로 불러왔습니다.');
+            alert('데이터 로드 완료');
             location.reload();
         } catch (err) {
-            alert('유효하지 않은 파일입니다.');
+            alert('파일 형식이 잘못되었습니다.');
         }
     };
     reader.readAsText(file);
