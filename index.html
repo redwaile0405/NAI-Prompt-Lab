@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NAI Prompt Lab (Original UI Preserved)</title>
+  <title>NAI Prompt Lab (Order Fixed Ed.)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script>
@@ -69,8 +69,8 @@
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-4">
           <h2 id="tabTitle" class="text-xl font-bold">작가 정리</h2>
-          <div id="bulk-action-area" class="hidden">
-             <button onclick="bulkDeletePrompts()" class="text-[10px] bg-rose-500 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-rose-600 transition-colors">현재 카테고리 일괄 삭제</button>
+          <div id="bulk-delete-area" class="hidden">
+             <button onclick="bulkDeletePrompts()" class="bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">현재 분류 데이터 일괄 삭제</button>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -182,7 +182,7 @@
 </div>
 
 <script>
-// --- 기존 분류 데이터 보존 (사용자 요청에 따라 변경 금지) ---
+// DB & Logic
 const DB_NAME = "NAIPromptLabDB_V16";
 const STORE_NAME = "labData";
 let db, artists = [], styles = [], prompts = [], researches = [];
@@ -203,8 +203,9 @@ let promptCategories = [
 let researchCategories = ["기본", "포즈", "색감", "소재"];
 
 let currentTab = 0, currentCategoryFilter = 'all', currentSubFilter = 'all', editId = null, builderVisible = false;
+let settingsSubTab = 'display';
 
-// DB & Sync
+// DB Functions
 async function initDB() { return new Promise((resolve) => { const request = indexedDB.open(DB_NAME, 1); request.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME); request.onsuccess = e => { db = e.target.result; resolve(); }; }); }
 async function saveToDB(key, data) { const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).put(JSON.parse(JSON.stringify(data)), key); }
 async function getFromDB(key) { return new Promise((res) => { const tx = db.transaction(STORE_NAME, "readonly"); const req = tx.objectStore(STORE_NAME).get(key); req.onsuccess = () => res(req.result); req.onerror = () => res(null); }); }
@@ -223,14 +224,9 @@ window.addEventListener('load', async () => {
   styles = await getFromDB('styles') || []; 
   prompts = await getFromDB('prompts') || []; 
   researches = await getFromDB('researches') || []; 
-  
-  const savedArtTags = localStorage.getItem('artTags');
-  if(savedArtTags) artistCommonTags = JSON.parse(savedArtTags);
-  const savedPCats = localStorage.getItem('pCats_V2');
-  if(savedPCats) promptCategories = JSON.parse(savedPCats);
-  const savedRCats = localStorage.getItem('researchCats');
-  if(savedRCats) researchCategories = JSON.parse(savedRCats);
-
+  const savedArtTags = localStorage.getItem('artTags'); if(savedArtTags) artistCommonTags = JSON.parse(savedArtTags);
+  const savedPCats = localStorage.getItem('pCats_V2'); if(savedPCats) promptCategories = JSON.parse(savedPCats);
+  const savedRCats = localStorage.getItem('researchCats'); if(savedRCats) researchCategories = JSON.parse(savedRCats);
   renderList(); 
 });
 
@@ -266,25 +262,44 @@ function switchTab(tab) {
   document.getElementById('tabTitle').textContent = ["작가 정리", "그림체 정리", "프롬프트 목록", "연구 정리", "아티스트 믹서", "시스템 설정"][tab];
   document.getElementById('mainHeader').style.display = (tab === 5) ? 'none' : 'flex';
   
-  // 프롬프트 일괄 삭제 버튼 제어
-  document.getElementById('bulk-action-area').style.display = (tab === 2) ? 'block' : 'none';
+  // [기능 추가] 프롬프트 탭일때만 일괄 삭제 버튼 표시
+  document.getElementById('bulk-delete-area').style.display = (tab === 2) ? 'block' : 'none';
 
   renderList(); 
 }
 
-// --- [기능 추가] 프롬프트 일괄 삭제 로직 ---
+// [기능 추가] 프롬프트 특정 분류 일괄 삭제
 function bulkDeletePrompts() {
     if(currentTab !== 2) return;
-    const catName = currentSubFilter !== 'all' ? currentSubFilter : (currentCategoryFilter !== 'all' ? currentCategoryFilter : '전체');
-    if(!confirm(`[${catName}] 소속의 모든 프롬프트를 일괄 삭제하시겠습니까?`)) return;
+    
+    let targetDesc = "전체";
+    let filteredForDelete = [];
 
-    prompts = prompts.filter(p => {
-        const matchMain = currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter;
-        const matchSub = currentSubFilter === 'all' || p.subCat === currentSubFilter;
-        return !(matchMain && matchSub);
-    });
+    if(currentSubFilter !== 'all') {
+        targetDesc = `[${currentCategoryFilter} > ${currentSubFilter}]`;
+        filteredForDelete = prompts.filter(p => p.mainCat === currentCategoryFilter && p.subCat === currentSubFilter);
+    } else if(currentCategoryFilter !== 'all') {
+        targetDesc = `[${currentCategoryFilter}] 대분류 전체`;
+        filteredForDelete = prompts.filter(p => p.mainCat === currentCategoryFilter);
+    } else {
+        targetDesc = "모든 분류의 전체";
+        filteredForDelete = [...prompts];
+    }
+
+    if(filteredForDelete.length === 0) return alert('삭제할 데이터가 없습니다.');
+    if(!confirm(`${targetDesc} 프롬프트 데이터 ${filteredForDelete.length}건을 일괄 삭제하시겠습니까?`)) return;
+
+    if(currentSubFilter !== 'all') {
+        prompts = prompts.filter(p => !(p.mainCat === currentCategoryFilter && p.subCat === currentSubFilter));
+    } else if(currentCategoryFilter !== 'all') {
+        prompts = prompts.filter(p => p.mainCat !== currentCategoryFilter);
+    } else {
+        prompts = [];
+    }
+
     syncAll();
     renderList();
+    alert('삭제가 완료되었습니다.');
 }
 
 function renderSideCategories() {
@@ -330,7 +345,7 @@ function renderList() {
   cont.innerHTML = '';
   renderSideCategories();
 
-  if (currentTab === 0) { // Artist
+  if (currentTab === 0) {
     cont.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8";
     artists.filter(a => (a.name.toLowerCase().includes(query) || (a.tags && a.tags.toLowerCase().includes(query))) && (currentCategoryFilter === 'all' || (a.tags && a.tags.includes(currentCategoryFilter))))
     .forEach((item) => {
@@ -355,7 +370,7 @@ function renderList() {
         </div>`;
       cont.appendChild(card);
     });
-  } else if (currentTab === 1) { // Style
+  } else if (currentTab === 1) {
     cont.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
     styles.filter(s => s.title.toLowerCase().includes(query)).forEach(item => {
       const card = document.createElement('div');
@@ -375,14 +390,10 @@ function renderList() {
         </div>`;
       cont.appendChild(card);
     });
-  } else if (currentTab === 2) { // Prompt
+  } else if (currentTab === 2) {
     cont.className = "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4";
-    prompts.filter(p => {
-        const matchSearch = p.word.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query);
-        const matchMain = currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter;
-        const matchSub = currentSubFilter === 'all' || p.subCat === currentSubFilter;
-        return matchSearch && matchMain && matchSub;
-    }).forEach(item => {
+    prompts.filter(p => (p.word.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query)) && (currentCategoryFilter === 'all' || p.mainCat === currentCategoryFilter) && (currentSubFilter === 'all' || p.subCat === currentSubFilter))
+    .forEach(item => {
       const card = document.createElement('div');
       card.className = 'bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-3 flex flex-col gap-2 group relative cursor-pointer hover:shadow-md';
       card.onclick = (e) => { if(!e.target.closest('button')) addToBuilder(item.word); };
@@ -401,7 +412,7 @@ function renderList() {
         </div>`;
       cont.appendChild(card);
     });
-  } else if (currentTab === 3) { // Research
+  } else if (currentTab === 3) {
     cont.className = "grid grid-cols-1 gap-6";
     researches.filter(r => (r.title.toLowerCase().includes(query) || r.prompt.toLowerCase().includes(query)) && (currentCategoryFilter === 'all' || r.category === currentCategoryFilter))
     .forEach(item => {
@@ -491,60 +502,26 @@ function updateSubCatSelect() {
 }
 
 function saveArtist() {
-    const obj = {
-        id: editId || Date.now().toString(),
-        name: document.getElementById('a_name').value,
-        danbooru: document.getElementById('a_danbooru').value,
-        tags: document.getElementById('a_tags').value,
-        line: document.getElementById('a_line').value,
-        color: document.getElementById('a_color').value,
-        stab: document.getElementById('a_stab').value,
-        cons: document.getElementById('a_cons').value,
-        imgs: [document.getElementById('a_img1').value, document.getElementById('a_img2').value, document.getElementById('a_img3').value],
-        notes: document.getElementById('a_notes').value
-    };
-    if(editId) artists = artists.map(a => a.id === editId ? obj : a);
-    else artists.push(obj);
+    const obj = { id: editId || Date.now().toString(), name: document.getElementById('a_name').value, danbooru: document.getElementById('a_danbooru').value, tags: document.getElementById('a_tags').value, line: document.getElementById('a_line').value, color: document.getElementById('a_color').value, stab: document.getElementById('a_stab').value, cons: document.getElementById('a_cons').value, imgs: [document.getElementById('a_img1').value, document.getElementById('a_img2').value, document.getElementById('a_img3').value], notes: document.getElementById('a_notes').value };
+    if(editId) artists = artists.map(a => a.id === editId ? obj : a); else artists.push(obj);
     syncAll(); closeModal(); renderList();
 }
 
 function saveStyle() {
-    const obj = {
-        id: editId || Date.now().toString(),
-        title: document.getElementById('s_title').value,
-        pos: document.getElementById('s_pos').value,
-        imgs: [document.getElementById('s_img1').value, document.getElementById('s_img2').value, document.getElementById('s_img3').value]
-    };
-    if(editId) styles = styles.map(s => s.id === editId ? obj : s);
-    else styles.push(obj);
+    const obj = { id: editId || Date.now().toString(), title: document.getElementById('s_title').value, pos: document.getElementById('s_pos').value, imgs: [document.getElementById('s_img1').value, document.getElementById('s_img2').value, document.getElementById('s_img3').value] };
+    if(editId) styles = styles.map(s => s.id === editId ? obj : s); else styles.push(obj);
     syncAll(); closeModal(); renderList();
 }
 
 function savePrompt() {
-    const obj = {
-        id: editId || Date.now().toString(),
-        word: document.getElementById('p_word').value,
-        desc: document.getElementById('p_desc').value,
-        mainCat: document.getElementById('p_main_cat').value,
-        subCat: document.getElementById('p_sub_cat').value,
-        image: document.getElementById('p_image').value
-    };
-    if(editId) prompts = prompts.map(p => p.id === editId ? obj : p);
-    else prompts.push(obj);
+    const obj = { id: editId || Date.now().toString(), word: document.getElementById('p_word').value, desc: document.getElementById('p_desc').value, mainCat: document.getElementById('p_main_cat').value, subCat: document.getElementById('p_sub_cat').value, image: document.getElementById('p_image').value };
+    if(editId) prompts = prompts.map(p => p.id === editId ? obj : p); else prompts.push(obj);
     syncAll(); closeModal(); renderList();
 }
 
 function saveResearch() {
-    const obj = {
-        id: editId || Date.now().toString(),
-        title: document.getElementById('r_title').value,
-        category: document.getElementById('r_category').value,
-        prompt: document.getElementById('r_prompt').value,
-        desc: document.getElementById('r_desc').value,
-        image: document.getElementById('r_image').value
-    };
-    if(editId) researches = researches.map(r => r.id === editId ? obj : r);
-    else researches.push(obj);
+    const obj = { id: editId || Date.now().toString(), title: document.getElementById('r_title').value, category: document.getElementById('r_category').value, prompt: document.getElementById('r_prompt').value, desc: document.getElementById('r_desc').value, image: document.getElementById('r_image').value };
+    if(editId) researches = researches.map(r => r.id === editId ? obj : r); else researches.push(obj);
     syncAll(); closeModal(); renderList();
 }
 
@@ -553,11 +530,9 @@ function edit(type, id) {
     if(type === 'artist') {
         const a = artists.find(x => x.id === id);
         document.getElementById('modalArtist').classList.remove('hidden');
-        document.getElementById('a_name').value = a.name; document.getElementById('a_danbooru').value = a.danbooru;
-        document.getElementById('a_tags').value = a.tags; document.getElementById('a_notes').value = a.notes;
+        document.getElementById('a_name').value = a.name; document.getElementById('a_danbooru').value = a.danbooru; document.getElementById('a_tags').value = a.tags; document.getElementById('a_notes').value = a.notes;
         document.getElementById('a_img1').value = a.imgs[0]; document.getElementById('a_img2').value = a.imgs[1]; document.getElementById('a_img3').value = a.imgs[2];
-        document.getElementById('a_line').value = a.line; document.getElementById('a_color').value = a.color;
-        document.getElementById('a_stab').value = a.stab; document.getElementById('a_cons').value = a.cons;
+        document.getElementById('a_line').value = a.line; document.getElementById('a_color').value = a.color; document.getElementById('a_stab').value = a.stab; document.getElementById('a_cons').value = a.cons;
         renderArtistTagPool(); updateVisual();
     } else if(type === 'style') {
         const s = styles.find(x => x.id === id);
@@ -575,11 +550,8 @@ function edit(type, id) {
     } else if(type === 'research') {
         const r = researches.find(x => x.id === id);
         document.getElementById('modalResearch').classList.remove('hidden');
-        const catS = document.getElementById('r_category');
-        catS.innerHTML = researchCategories.map(c => `<option value="${c}">${c}</option>`).join('');
-        document.getElementById('r_title').value = r.title; document.getElementById('r_category').value = r.category;
-        document.getElementById('r_prompt').value = r.prompt; document.getElementById('r_desc').value = r.desc;
-        document.getElementById('r_image').value = r.image;
+        const catS = document.getElementById('r_category'); catS.innerHTML = researchCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+        document.getElementById('r_title').value = r.title; document.getElementById('r_category').value = r.category; document.getElementById('r_prompt').value = r.prompt; document.getElementById('r_desc').value = r.desc; document.getElementById('r_image').value = r.image;
     }
 }
 
@@ -650,118 +622,133 @@ function generateMix() {
     }
 }
 
-// --- [기능 추가/수정] 설정 UI 및 내보내기/가져오기 기능 ---
 function renderSettings() {
     const cont = document.getElementById('content');
-    cont.className = "max-w-4xl mx-auto w-full space-y-6";
+    cont.className = "flex gap-8 max-w-6xl mx-auto w-full h-full overflow-hidden";
     cont.innerHTML = `
-      <div class="bg-white dark:bg-slate-800 rounded-3xl border dark:border-slate-700 p-10 shadow-sm">
-        <h2 class="text-3xl font-black mb-8">시스템 설정</h2>
-        <div class="space-y-10">
-          <section>
-            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Display Mode</h3>
-            <div class="flex gap-4">
-              <button onclick="setDarkMode(false)" class="flex-1 py-4 rounded-2xl border-2 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">라이트 모드</button>
-              <button onclick="setDarkMode(true)" class="flex-1 py-4 rounded-2xl border-2 font-bold dark:border-blue-500 transition-all">다크 모드</button>
-            </div>
-          </section>
-
-          <section class="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed">
-            <h3 class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4">데이터 관리</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div class="space-y-3">
-                <p class="text-[11px] font-bold text-slate-500">데이터 내보내기</p>
-                <div class="flex flex-col gap-2">
-                   <select id="export_target" class="w-full text-[11px] border rounded-lg p-2 font-bold">
-                      <option value="all">전체 데이터 (백업용)</option>
-                      <option value="prompts_all">프롬프트 전체</option>
-                      ${promptCategories.map(c => `<option value="p_${c.name}">프롬프트 - ${c.name} 대분류</option>`).join('')}
-                   </select>
-                   <button onclick="handleExport()" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm">선택 항목 내보내기</button>
-                </div>
-              </div>
-              <div class="space-y-3">
-                <p class="text-[11px] font-bold text-slate-500">데이터 가져오기</p>
-                <label class="block py-3 bg-emerald-600 text-white rounded-xl font-bold text-center cursor-pointer text-sm">
-                    JSON 파일 불러오기
-                    <input type="file" id="import-file" class="hidden" onchange="handleImport(event)">
-                </label>
-                <p class="text-[9px] text-slate-400">* 파일 선택 후 추가/교체를 선택할 수 있습니다.</p>
-              </div>
-            </div>
-          </section>
-        </div>
+      <aside class="w-48 shrink-0 space-y-2">
+        <button onclick="switchSettings('display')" class="settings-sub-tab w-full text-left px-4 py-3 rounded-xl text-xs font-black ${settingsSubTab==='display'?'settings-sub-tab active':''}">디스플레이</button>
+        <button onclick="switchSettings('data')" class="settings-sub-tab w-full text-left px-4 py-3 rounded-xl text-xs font-black ${settingsSubTab==='data'?'settings-sub-tab active':''}">데이터 관리</button>
+        <button onclick="switchSettings('category')" class="settings-sub-tab w-full text-left px-4 py-3 rounded-xl text-xs font-black ${settingsSubTab==='category'?'settings-sub-tab active':''}">카테고리 설정</button>
+      </aside>
+      <div class="flex-1 bg-white dark:bg-slate-800 rounded-3xl border dark:border-slate-700 p-8 overflow-y-auto">
+        <div id="settings-detail"></div>
       </div>
     `;
+    renderSettingsDetail();
 }
 
-function setDarkMode(isDark) {
-  if (isDark) {
-    document.documentElement.classList.add('dark');
-    localStorage.setItem('dark-mode', 'enabled');
-  } else {
-    document.documentElement.classList.remove('dark');
-    localStorage.setItem('dark-mode', 'disabled');
-  }
+function switchSettings(sub) { settingsSubTab = sub; renderSettings(); }
+
+function renderSettingsDetail() {
+    const detail = document.getElementById('settings-detail');
+    if (settingsSubTab === 'display') {
+        detail.innerHTML = `
+          <h3 class="text-xl font-black mb-6">디스플레이 설정</h3>
+          <div class="space-y-6">
+            <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+              <span class="font-bold">다크 모드</span>
+              <button onclick="toggleDarkMode()" class="px-6 py-2 bg-slate-200 dark:bg-slate-700 rounded-xl font-bold text-xs">${document.documentElement.classList.contains('dark')?'ON':'OFF'}</button>
+            </div>
+          </div>`;
+    } else if (settingsSubTab === 'data') {
+        detail.innerHTML = `
+          <h3 class="text-xl font-black mb-6">데이터 백업/복구</h3>
+          <div class="space-y-8">
+            <div class="p-6 border-2 border-dashed rounded-2xl">
+              <p class="text-xs font-black text-blue-500 uppercase mb-4">Prompt Data Control</p>
+              <div class="grid grid-cols-2 gap-4 items-end">
+                <div>
+                   <label class="text-[10px] font-bold text-slate-400 mb-2 block">내보내기 필터 선택</label>
+                   <select id="export_filter" class="w-full border rounded-xl p-3 text-xs font-bold mb-2">
+                      <option value="all">전체 프롬프트 모두 내보내기</option>
+                      ${promptCategories.map(c => `<option value="${c.name}">${c.name} 대분류만 내보내기</option>`).join('')}
+                   </select>
+                   <button onclick="exportData('prompts')" class="w-full py-4 bg-blue-600 text-white rounded-xl font-black shadow-lg">프롬프트 내보내기</button>
+                </div>
+                <button onclick="document.getElementById('imp_prompts').click()" class="py-4 bg-emerald-600 text-white rounded-xl font-black shadow-lg">프롬프트 가져오기</button>
+              </div>
+              <input type="file" id="imp_prompts" class="hidden" onchange="importData(event, 'prompts')">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <button onclick="exportData('artists')" class="py-4 border-2 rounded-2xl font-black text-xs hover:bg-slate-50 dark:hover:bg-slate-700">작가 데이터 내보내기</button>
+              <button onclick="document.getElementById('imp_artists').click()" class="py-4 border-2 rounded-2xl font-black text-xs hover:bg-slate-50 dark:hover:bg-slate-700">작가 데이터 가져오기</button>
+              <input type="file" id="imp_artists" class="hidden" onchange="importData(event, 'artists')">
+            </div>
+
+            <div class="pt-6 border-t">
+              <button onclick="clearAllData()" class="text-red-500 font-bold text-xs underline">모든 데이터 초기화 (주의)</button>
+            </div>
+          </div>`;
+    } else if (settingsSubTab === 'category') {
+        detail.innerHTML = `
+            <h3 class="text-xl font-black mb-6">분류 체계 관리</h3>
+            <div class="space-y-6">
+                <div>
+                    <label class="text-xs font-bold text-slate-400 block mb-2">작가 속성 태그 (쉼표 구분)</label>
+                    <textarea id="set_art_tags" class="w-full border rounded-xl p-4 h-24 text-sm font-bold">${artistCommonTags.join(', ')}</textarea>
+                </div>
+                <button onclick="saveCategorySettings()" class="w-full py-3 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-xl font-black">설정 저장</button>
+            </div>
+        `;
+    }
 }
 
-// 내보내기 로직
-function handleExport() {
-    const target = document.getElementById('export_target').value;
-    let exportData = { artists:[], styles:[], prompts:[], researches:[] };
-    let fileName = `NAI_Lab_Backup_${new Date().toISOString().slice(0,10)}`;
+function toggleDarkMode() {
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('dark-mode', document.documentElement.classList.contains('dark') ? 'enabled' : 'disabled');
+  renderSettings();
+}
 
-    if (target === 'all') {
-        exportData = { artists, styles, prompts, researches, artistCommonTags, promptCategories, researchCategories };
-    } else if (target === 'prompts_all') {
-        exportData.prompts = prompts;
-        fileName = "NAI_Prompts_All";
-    } else if (target.startsWith('p_')) {
-        const catName = target.replace('p_', '');
-        exportData.prompts = prompts.filter(p => p.mainCat === catName);
-        fileName = `NAI_Prompts_${catName}`;
+function saveCategorySettings() {
+    artistCommonTags = document.getElementById('set_art_tags').value.split(',').map(x => x.trim()).filter(x => x);
+    syncAll(); alert('저장되었습니다.');
+}
+
+// [기능 추가] 내보내기 필터링 로직
+function exportData(type) {
+    let data = {};
+    let filename = `NAI_${type}_${new Date().toISOString().slice(0,10)}.json`;
+
+    if(type === 'prompts') {
+        const filterVal = document.getElementById('export_filter').value;
+        if(filterVal === 'all') {
+            data = { prompts };
+        } else {
+            data = { prompts: prompts.filter(p => p.mainCat === filterVal) };
+            filename = `NAI_Prompts_${filterVal}_${new Date().toISOString().slice(0,10)}.json`;
+        }
+    } else if(type === 'artists') {
+        data = { artists };
     }
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName + ".json";
-    a.click();
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
 }
 
-// 가져오기 로직 (추가/교체 선택 기능 포함)
-function handleImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
+function importData(event, type) {
+    const file = event.target.files[0]; if(!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = e => {
         try {
-            const imported = JSON.parse(e.target.result);
-            const mode = confirm("기존 데이터에 [합치기]를 하시겠습니까?\n\n(확인: 합치기 / 취소: 기존 데이터 삭제 후 교체)") ? 'append' : 'replace';
-            
-            if (mode === 'append') {
-                if(imported.artists) artists = [...artists, ...imported.artists];
-                if(imported.styles) styles = [...styles, ...imported.styles];
-                if(imported.prompts) prompts = [...prompts, ...imported.prompts];
-                if(imported.researches) researches = [...researches, ...imported.researches];
-            } else {
-                artists = imported.artists || [];
-                styles = imported.styles || [];
-                prompts = imported.prompts || [];
-                researches = imported.researches || [];
+            const json = JSON.parse(e.target.result);
+            if(type === 'artists' && json.artists) {
+                if(confirm('기존 데이터에 합치시겠습니까? (취소 시 기존 데이터 삭제 후 덮어쓰기)')) artists = [...artists, ...json.artists];
+                else artists = json.artists;
             }
-            
-            syncAll();
-            alert('데이터를 성공적으로 불러왔습니다.');
-            location.reload();
-        } catch (err) {
-            alert('유효한 JSON 형식이 아닙니다.');
-        }
+            if(type === 'prompts' && json.prompts) {
+                if(confirm('기존 데이터에 합치시겠습니까? (취소 시 기존 데이터 삭제 후 덮어쓰기)')) prompts = [...prompts, ...json.prompts];
+                else prompts = json.prompts;
+            }
+            syncAll(); renderList(); alert('가져오기 성공');
+        } catch(err) { alert('파일 형식이 잘못되었습니다.'); }
     };
     reader.readAsText(file);
 }
+
+function clearAllData() { if(confirm('진짜 다 지워요? 되돌릴 수 없습니다.')) { artists=[]; styles=[]; prompts=[]; researches=[]; syncAll(); location.reload(); } }
 </script>
 </body>
 </html>
