@@ -70,6 +70,7 @@
         <h2 id="tabTitle" class="text-xl font-bold">작가 정리</h2>
         <div class="flex items-center gap-2">
           <button onclick="toggleBuilder()" class="header-btn bg-slate-600">빌더</button>
+          <button id="dataManageBtn" onclick="openDataManageModal()" class="header-btn bg-amber-500 hidden"><i class="fa-solid fa-database"></i> 데이터 관리</button>
           <button id="mainAddBtn" onclick="addItem()" class="header-btn bg-red-500"><i class="fa-solid fa-plus"></i> 추가</button>
         </div>
       </div>
@@ -103,6 +104,30 @@
       <button onclick="clearBuilder()" class="text-[10px] text-slate-400 text-center underline">빌더 초기화</button>
     </div>
   </aside>
+</div>
+
+<div id="modalDataManage" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-[60] p-4">
+  <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-8 shadow-2xl">
+    <h3 id="dm_title" class="text-xl font-black mb-4">데이터 일괄 관리</h3>
+    <p class="text-xs text-slate-500 mb-6">내보낼 때는 선택한 분류의 데이터만 파일로 저장되며, 삭제 시에는 선택한 분류의 데이터가 완전히 삭제됩니다.</p>
+    
+    <div class="space-y-4 mb-8">
+        <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">대분류 선택</label>
+            <select id="dm_main_cat" onchange="updateDMSubSelect()" class="w-full border p-3 rounded-xl font-bold"></select>
+        </div>
+        <div id="dm_sub_area">
+            <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">소분류 선택</label>
+            <select id="dm_sub_cat" class="w-full border p-3 rounded-xl font-bold"></select>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+        <button onclick="exportByFilter()" class="bg-slate-800 text-white py-3 rounded-xl font-bold shadow-md hover:bg-slate-700 transition-all">선택 항목 내보내기</button>
+        <button onclick="deleteByFilter()" class="bg-red-500 text-white py-3 rounded-xl font-bold shadow-md hover:bg-red-600 transition-all">선택 항목 삭제</button>
+    </div>
+    <button onclick="closeModal()" class="w-full mt-3 py-2 text-slate-400 text-sm font-bold">닫기</button>
+  </div>
 </div>
 
 <div id="modalArtist" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-50 p-4">
@@ -144,8 +169,8 @@
     <textarea id="s_pos" rows="4" placeholder="그림체를 구현할 프롬프트 입력" class="w-full border rounded-xl p-4 font-mono text-sm mb-4"></textarea>
     <div class="grid grid-cols-3 gap-3 mb-6">
       <div><label class="file-input-label" for="s_img_file1">IMG 1</label><input type="file" id="s_img_file1" class="hidden" onchange="handleImgUpload(event, 's_img1')"><input type="hidden" id="s_img1"></div>
-      <div><label class="file-input-label" for="s_img_file2">IMG 2</label><input type="file" id="s_img_file2" class="hidden" onchange="handleImgUpload(event, 's_img2')"><input type="hidden" id="s_img1"></div>
-      <div><label class="file-input-label" for="s_img_file3">IMG 3</label><input type="file" id="s_img_file3" class="hidden" onchange="handleImgUpload(event, 's_img3')"><input type="hidden" id="s_img1"></div>
+      <div><label class="file-input-label" for="s_img_file2">IMG 2</label><input type="file" id="s_img_file2" class="hidden" onchange="handleImgUpload(event, 's_img2')"><input type="hidden" id="s_img2"></div>
+      <div><label class="file-input-label" for="s_img_file3">IMG 3</label><input type="file" id="s_img_file3" class="hidden" onchange="handleImgUpload(event, 's_img3')"><input type="hidden" id="s_img3"></div>
     </div>
     <div class="flex justify-end gap-3"><button onclick="closeModal()" class="px-6 py-2 border rounded-xl">취소</button><button onclick="saveStyle()" class="px-10 py-2 bg-violet-600 text-white rounded-xl font-bold shadow-lg">저장</button></div>
   </div>
@@ -240,6 +265,12 @@ function switchTab(tab) {
   if(document.getElementById('tab' + tab)) document.getElementById('tab' + tab).classList.add('tab-active');
   document.getElementById('tabTitle').textContent = ["작가 정리", "그림체 정리", "프롬프트 목록", "연구 정리", "아티스트 믹서", "시스템 설정"][tab];
   document.getElementById('mainHeader').style.display = (tab === 5) ? 'none' : 'flex';
+  
+  // 데이터 관리 버튼 노출 설정
+  const dmBtn = document.getElementById('dataManageBtn');
+  if (tab === 2 || tab === 3) dmBtn.classList.remove('hidden');
+  else dmBtn.classList.add('hidden');
+
   renderList(); 
 }
 
@@ -336,23 +367,7 @@ function renderList() {
     });
   } else if (currentTab === 2) {
     const grid = document.createElement('div'); grid.className = 'grid grid-cols-2 md:grid-cols-4 gap-4';
-    
-    // 정렬 로직 강화: 대분류 순서 -> 소분류 순서 -> 등록 순서
-    const sortedPrompts = [...prompts].sort((a, b) => {
-        const catAIdx = promptCategories.findIndex(c => c.name === a.category);
-        const catBIdx = promptCategories.findIndex(c => c.name === b.category);
-        if (catAIdx !== catBIdx) return (catAIdx === -1 ? 999 : catAIdx) - (catBIdx === -1 ? 999 : catBIdx);
-        
-        const parentCat = promptCategories[catAIdx];
-        if (parentCat) {
-            const subAIdx = parentCat.subs.indexOf(a.subCategory);
-            const subBIdx = parentCat.subs.indexOf(b.subCategory);
-            if (subAIdx !== subBIdx) return (subAIdx === -1 ? 999 : subAIdx) - (subBIdx === -1 ? 999 : subBIdx);
-        }
-        return 0;
-    });
-
-    sortedPrompts.filter(p => {
+    prompts.filter(p => {
         const matchMain = (currentCategoryFilter === 'all' || p.category === currentCategoryFilter);
         const matchSub = (currentSubFilter === 'all' || p.subCategory === currentSubFilter);
         const matchQuery = p.word.toLowerCase().includes(query) || (p.desc && p.desc.toLowerCase().includes(query));
@@ -363,8 +378,6 @@ function renderList() {
         <div class="flex justify-between items-start">
             <span class="font-mono text-emerald-600 dark:text-emerald-400 font-black text-sm break-all leading-tight">${p.word}</span>
             <div class="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onclick="event.stopPropagation(); moveItem('prompt', '${p.id}', -1)" class="text-slate-300 hover:text-blue-500"><i class="fa-solid fa-angle-left"></i></button>
-                <button onclick="event.stopPropagation(); moveItem('prompt', '${p.id}', 1)" class="text-slate-300 hover:text-blue-500"><i class="fa-solid fa-angle-right"></i></button>
                 <button onclick="event.stopPropagation(); edit('prompt','${p.id}')" class="text-blue-400 ml-1"><i class="fa-solid fa-edit text-[10px]"></i></button>
                 <button onclick="event.stopPropagation(); del('prompt','${p.id}')" class="text-red-400 ml-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
             </div>
@@ -384,10 +397,6 @@ function renderList() {
     researches.filter(r => (currentCategoryFilter === 'all' || r.category === currentCategoryFilter) && r.title.toLowerCase().includes(query)).forEach((r) => {
       const div = document.createElement('div'); div.className = 'bg-white dark:bg-slate-800 rounded-3xl border overflow-hidden flex flex-col shadow-sm card relative';
       div.innerHTML = `
-        <div class="absolute top-2 right-2 flex gap-1 move-btn z-10">
-          <button onclick="moveItem('research', '${r.id}', -1)" class="w-6 h-6 bg-white/80 rounded-full text-[10px]"><i class="fa-solid fa-chevron-up"></i></button>
-          <button onclick="moveItem('research', '${r.id}', 1)" class="w-6 h-6 bg-white/80 rounded-full text-[10px]"><i class="fa-solid fa-chevron-down"></i></button>
-        </div>
         <div class="img-container !pt-[100%]"><img src="${r.image}" onerror="this.src='https://placehold.co/400x400?text=Research'"></div>
         <div class="p-6 flex-1 flex flex-col">
             <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-lg">${r.title}</h4><span class="cat-badge">${r.category || '미분류'}</span></div>
@@ -405,14 +414,161 @@ function renderList() {
   else if (currentTab === 5) renderSettings(cont);
 }
 
+// --- 특정 분류 데이터 관리 기능 ---
+function openDataManageModal() {
+    const modal = document.getElementById('modalDataManage');
+    const mainSelect = document.getElementById('dm_main_cat');
+    const title = document.getElementById('dm_title');
+    const subArea = document.getElementById('dm_sub_area');
+
+    title.textContent = currentTab === 2 ? '프롬프트 데이터 관리' : '연구 데이터 관리';
+    subArea.style.display = currentTab === 2 ? 'block' : 'none';
+
+    let options = '<option value="all">전체 분류</option><option value="unclassified">미분류</option>';
+    if (currentTab === 2) {
+        options += promptCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    } else {
+        options += researchCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+    mainSelect.innerHTML = options;
+    updateDMSubSelect();
+    modal.classList.remove('hidden');
+}
+
+function updateDMSubSelect() {
+    if (currentTab !== 2) return;
+    const mainVal = document.getElementById('dm_main_cat').value;
+    const subSelect = document.getElementById('dm_sub_cat');
+    const parent = promptCategories.find(c => c.name === mainVal);
+    
+    let options = '<option value="all">전체 소분류</option>';
+    if (parent) {
+        options += parent.subs.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+    subSelect.innerHTML = options;
+}
+
+async function exportByFilter() {
+    const mainCat = document.getElementById('dm_main_cat').value;
+    const subCat = currentTab === 2 ? document.getElementById('dm_sub_cat').value : 'all';
+    
+    let targetData = [];
+    let fileName = '';
+
+    if (currentTab === 2) {
+        targetData = prompts.filter(p => {
+            const mMatch = mainCat === 'all' || (mainCat === 'unclassified' ? !p.category : p.category === mainCat);
+            const sMatch = subCat === 'all' || p.subCategory === subCat;
+            return mMatch && sMatch;
+        });
+        fileName = `PROMPTS_${mainCat}_${subCat}.json`;
+    } else {
+        targetData = researches.filter(r => {
+            return mainCat === 'all' || (mainCat === 'unclassified' ? !r.category : r.category === mainCat);
+        });
+        fileName = `RESEARCH_${mainCat}.json`;
+    }
+
+    if (targetData.length === 0) return alert('내보낼 데이터가 없습니다.');
+    
+    // 분류 정보 포함하여 저장 (가져오기 시 자동 생성용)
+    const exportObj = {
+        type: currentTab === 2 ? 'prompts' : 'researches',
+        data: targetData,
+        categories: currentTab === 2 ? promptCategories : researchCategories
+    };
+
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    a.click();
+    closeModal();
+}
+
+async function deleteByFilter() {
+    const mainCat = document.getElementById('dm_main_cat').value;
+    const subCat = currentTab === 2 ? document.getElementById('dm_sub_cat').value : 'all';
+
+    if (!confirm(`선택한 분류(${mainCat}/${subCat})의 데이터를 모두 삭제하시겠습니까?`)) return;
+
+    if (currentTab === 2) {
+        prompts = prompts.filter(p => {
+            const mMatch = mainCat === 'all' || (mainCat === 'unclassified' ? !p.category : p.category === mainCat);
+            const sMatch = subCat === 'all' || p.subCategory === subCat;
+            return !(mMatch && sMatch);
+        });
+    } else {
+        researches = researches.filter(r => {
+            const mMatch = mainCat === 'all' || (mainCat === 'unclassified' ? !r.category : r.category === mainCat);
+            return !mMatch;
+        });
+    }
+
+    await syncAll();
+    renderList();
+    closeModal();
+    alert('삭제가 완료되었습니다.');
+}
+
+// --- 전체 백업 가져오기 ---
+function importFullBackup() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = async ev => {
+            try {
+                const d = JSON.parse(ev.target.result);
+                if (!confirm("전체 백업을 가져오면 현재 로컬의 설정 및 데이터가 병합됩니다. 진행할까요?")) return;
+
+                if (d.artists) {
+                    d.artists.forEach(item => { if(!artists.find(a => a.id === item.id)) artists.push(item); });
+                }
+                if (d.styles) {
+                    d.styles.forEach(item => { if(!styles.find(s => s.id === item.id)) styles.push(item); });
+                }
+                if (d.prompts) {
+                    // 프롬프트 및 분류 자동 생성
+                    if (d.promptCategories) {
+                        d.promptCategories.forEach(extCat => {
+                            let locCat = promptCategories.find(c => c.name === extCat.name);
+                            if (!locCat) {
+                                promptCategories.push(extCat);
+                            } else {
+                                extCat.subs.forEach(s => { if(!locCat.subs.includes(s)) locCat.subs.push(s); });
+                            }
+                        });
+                    }
+                    d.prompts.forEach(item => { if(!prompts.find(p => p.id === item.id)) prompts.push(item); });
+                }
+                if (d.researches) {
+                    if (d.researchCategories) {
+                        d.researchCategories.forEach(rc => { if(!researchCategories.includes(rc)) researchCategories.push(rc); });
+                    }
+                    d.researches.forEach(item => { if(!researches.find(r => r.id === item.id)) researches.push(item); });
+                }
+                if (d.artistCommonTags) {
+                    d.artistCommonTags.forEach(t => { if(!artistCommonTags.includes(t)) artistCommonTags.push(t); });
+                }
+
+                await syncAll();
+                alert('전체 백업 데이터 병합 완료!');
+                location.reload();
+            } catch (err) {
+                alert('파일 형식이 올바르지 않습니다.');
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
 // --- 순서 조정 기능 ---
 async function moveItem(type, id, direction) {
-    let list;
-    if(type === 'artist') list = artists;
-    else if(type === 'style') list = styles;
-    else if(type === 'research') list = researches;
-    else if(type === 'prompt') list = prompts;
-    
+    let list = (type === 'artist') ? artists : (type === 'style' ? styles : (type === 'research' ? researches : prompts));
     const index = list.findIndex(item => item.id === id);
     if(index === -1) return;
     const newIdx = index + direction;
@@ -513,32 +669,22 @@ function renderSettingsDetail() {
     detail.innerHTML = `
         <h3 class="text-2xl font-black mb-4">데이터 관리</h3>
         <p class="text-sm text-blue-500 mb-8 font-bold">내보내기 시 각 파트별 JSON 파일이 생성됩니다. '삭제'는 로컬 데이터를 초기화합니다.</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             ${['artists','prompts','styles','researches'].map(type => `
             <div class="p-6 border dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50 flex flex-col gap-4">
                 <p class="font-black uppercase text-slate-500">${type}</p>
                 <div class="flex gap-2">
                     <button onclick="exportSingle('${type}')" class="flex-1 bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-bold">내보내기</button>
                     <button onclick="importSingle('${type}')" class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-bold">가져오기</button>
-                    <button onclick="clearSpecificData('${type}')" class="bg-red-500 text-white px-3 py-2 rounded-xl text-xs font-bold">삭제</button>
                 </div>
             </div>`).join('')}
         </div>
-        <button onclick="exportData()" class="mt-8 w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-lg shadow-xl">전체 백업 생성</button>
+        <div class="border-t pt-8">
+          <button onclick="exportData()" class="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-lg shadow-xl mb-3">전체 백업 생성</button>
+          <button onclick="importFullBackup()" class="w-full py-5 bg-blue-700 text-white rounded-[2rem] font-black text-lg shadow-xl hover:bg-blue-800 transition-all">전체 백업 파일 가져오기</button>
+        </div>
     `;
   }
-}
-
-// --- 일괄 삭제 기능 ---
-async function clearSpecificData(type) {
-    if(!confirm(`${type}의 모든 데이터를 삭제하시겠습니까? 백업되지 않은 데이터는 복구할 수 없습니다.`)) return;
-    if(type === 'artists') artists = [];
-    else if(type === 'prompts') prompts = [];
-    else if(type === 'styles') styles = [];
-    else if(type === 'researches') researches = [];
-    await syncAll();
-    alert('삭제되었습니다.');
-    renderSettingsDetail();
 }
 
 // --- 카테고리 로직 ---
@@ -684,6 +830,8 @@ function clearBuilder() { if(confirm('빌더를 비우시겠습니까?')) { docu
 // --- 데이터 백업 ---
 async function exportData() { const d={artists,styles,prompts,researches,artistCommonTags,promptCategories,researchCategories}; const blob=new Blob([JSON.stringify(d, null, 2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`NAI_LAB_FULL_BACKUP.json`; a.click(); }
 function exportSingle(type) { let d = {}; if(type==='artists') d={artists}; else if(type==='prompts') d={prompts,promptCategories}; else if(type==='styles') d={styles}; else if(type==='researches') d={researches,researchCategories}; const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`NAI_${type.toUpperCase()}.json`; a.click(); }
+
+// 가져오기 로직 - 자동 분류 생성 추가
 function importSingle(type) {
   const input=document.createElement('input'); input.type='file'; input.accept='.json';
   input.onchange=e=>{
@@ -691,10 +839,43 @@ function importSingle(type) {
     reader.onload=async ev=>{
       try{
         const d=JSON.parse(ev.target.result); let count=0;
-        if(type==='artists' && d.artists) d.artists.forEach(x=>{if(!artists.find(y=>y.id===x.id)){artists.push(x);count++;}});
-        else if(type==='prompts' && d.prompts) { d.prompts.forEach(x=>{if(!prompts.find(y=>y.id===x.id)){prompts.push(x);count++;}}); if(d.promptCategories) promptCategories = d.promptCategories; }
-        else if(type==='styles' && d.styles) d.styles.forEach(x=>{if(!styles.find(y=>y.id===x.id)){styles.push(x);count++;}});
-        else if(type==='researches' && d.researches) d.researches.forEach(x=>{if(!researches.find(y=>y.id===x.id)){researches.push(x);count++;}});
+        
+        // 특정 필터로 내보낸 파일인 경우 구조 조정
+        const rawData = d.data || (type === 'artists' ? d.artists : (type === 'prompts' ? d.prompts : (type === 'styles' ? d.styles : d.researches)));
+
+        if(type==='artists' && rawData) rawData.forEach(x=>{if(!artists.find(y=>y.id===x.id)){artists.push(x);count++;}});
+        else if(type==='prompts' && rawData) {
+            // 외부 분류 정보가 있으면 자동 추가
+            if (d.categories) {
+                d.categories.forEach(extCat => {
+                    let locCat = promptCategories.find(c => c.name === extCat.name);
+                    if (!locCat) { promptCategories.push(extCat); } 
+                    else { extCat.subs.forEach(s => { if(!locCat.subs.includes(s)) locCat.subs.push(s); }); }
+                });
+            }
+            rawData.forEach(x=>{
+                if(!prompts.find(y=>y.id===x.id)){
+                    // 개별 프롬프트의 분류가 로컬에 없는 경우에도 자동 생성
+                    if (x.category && !promptCategories.find(c => c.name === x.category)) {
+                        promptCategories.push({name: x.category, subs: x.subCategory ? [x.subCategory] : []});
+                    } else if (x.category && x.subCategory) {
+                        let locCat = promptCategories.find(c => c.name === x.category);
+                        if (!locCat.subs.includes(x.subCategory)) locCat.subs.push(x.subCategory);
+                    }
+                    prompts.push(x); count++;
+                }
+            });
+        }
+        else if(type==='styles' && rawData) rawData.forEach(x=>{if(!styles.find(y=>y.id===x.id)){styles.push(x);count++;}});
+        else if(type==='researches' && rawData) {
+            if (d.categories) { d.categories.forEach(rc => { if(!researchCategories.includes(rc)) researchCategories.push(rc); }); }
+            rawData.forEach(x=>{
+                if(!researches.find(y=>y.id===x.id)){
+                    if (x.category && !researchCategories.includes(x.category)) researchCategories.push(x.category);
+                    researches.push(x); count++;
+                }
+            });
+        }
         await syncAll(); alert(count+'개 항목 병합 성공'); location.reload();
       }catch(e){alert('잘못된 파일 형식입니다.');}
     }; reader.readAsText(e.target.files[0]);
