@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NAI Prompt Lab (Order Fixed Ed.)</title>
+  <title>NAI Prompt Lab (Enhanced Ed.)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script>
@@ -144,8 +144,8 @@
     <textarea id="s_pos" rows="4" placeholder="그림체를 구현할 프롬프트 입력" class="w-full border rounded-xl p-4 font-mono text-sm mb-4"></textarea>
     <div class="grid grid-cols-3 gap-3 mb-6">
       <div><label class="file-input-label" for="s_img_file1">IMG 1</label><input type="file" id="s_img_file1" class="hidden" onchange="handleImgUpload(event, 's_img1')"><input type="hidden" id="s_img1"></div>
-      <div><label class="file-input-label" for="s_img_file2">IMG 2</label><input type="file" id="s_img_file2" class="hidden" onchange="handleImgUpload(event, 's_img2')"><input type="hidden" id="s_img2"></div>
-      <div><label class="file-input-label" for="s_img_file3">IMG 3</label><input type="file" id="s_img_file3" class="hidden" onchange="handleImgUpload(event, 's_img3')"><input type="hidden" id="s_img3"></div>
+      <div><label class="file-input-label" for="s_img_file2">IMG 2</label><input type="file" id="s_img_file2" class="hidden" onchange="handleImgUpload(event, 's_img2')"><input type="hidden" id="s_img1"></div>
+      <div><label class="file-input-label" for="s_img_file3">IMG 3</label><input type="file" id="s_img_file3" class="hidden" onchange="handleImgUpload(event, 's_img3')"><input type="hidden" id="s_img1"></div>
     </div>
     <div class="flex justify-end gap-3"><button onclick="closeModal()" class="px-6 py-2 border rounded-xl">취소</button><button onclick="saveStyle()" class="px-10 py-2 bg-violet-600 text-white rounded-xl font-bold shadow-lg">저장</button></div>
   </div>
@@ -336,7 +336,23 @@ function renderList() {
     });
   } else if (currentTab === 2) {
     const grid = document.createElement('div'); grid.className = 'grid grid-cols-2 md:grid-cols-4 gap-4';
-    prompts.filter(p => {
+    
+    // 정렬 로직 강화: 대분류 순서 -> 소분류 순서 -> 등록 순서
+    const sortedPrompts = [...prompts].sort((a, b) => {
+        const catAIdx = promptCategories.findIndex(c => c.name === a.category);
+        const catBIdx = promptCategories.findIndex(c => c.name === b.category);
+        if (catAIdx !== catBIdx) return (catAIdx === -1 ? 999 : catAIdx) - (catBIdx === -1 ? 999 : catBIdx);
+        
+        const parentCat = promptCategories[catAIdx];
+        if (parentCat) {
+            const subAIdx = parentCat.subs.indexOf(a.subCategory);
+            const subBIdx = parentCat.subs.indexOf(b.subCategory);
+            if (subAIdx !== subBIdx) return (subAIdx === -1 ? 999 : subAIdx) - (subBIdx === -1 ? 999 : subBIdx);
+        }
+        return 0;
+    });
+
+    sortedPrompts.filter(p => {
         const matchMain = (currentCategoryFilter === 'all' || p.category === currentCategoryFilter);
         const matchSub = (currentSubFilter === 'all' || p.subCategory === currentSubFilter);
         const matchQuery = p.word.toLowerCase().includes(query) || (p.desc && p.desc.toLowerCase().includes(query));
@@ -356,7 +372,7 @@ function renderList() {
         ${p.desc ? `<p class="text-[10px] font-bold text-slate-400 leading-tight border-t pt-1 dark:border-slate-700">${p.desc}</p>` : ''}
         ${p.image ? `<div class="w-full h-24 rounded-lg overflow-hidden my-1 bg-slate-100"><img src="${p.image}" class="w-full h-full object-cover"></div>` : ''}
         <div class="flex gap-1 flex-wrap mt-auto pt-2">
-            <span class="cat-badge">${p.category}</span>
+            <span class="cat-badge">${p.category || '미분류'}</span>
             ${p.subCategory ? `<span class="cat-badge !bg-emerald-100 dark:!bg-emerald-900/40">${p.subCategory}</span>`:''}
         </div>`;
       div.onclick = () => { document.getElementById('positive').value += (document.getElementById('positive').value ? ', ' : '') + p.word; };
@@ -374,7 +390,7 @@ function renderList() {
         </div>
         <div class="img-container !pt-[100%]"><img src="${r.image}" onerror="this.src='https://placehold.co/400x400?text=Research'"></div>
         <div class="p-6 flex-1 flex flex-col">
-            <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-lg">${r.title}</h4><span class="cat-badge">${r.category}</span></div>
+            <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-lg">${r.title}</h4><span class="cat-badge">${r.category || '미분류'}</span></div>
             <p class="text-xs text-slate-500 mb-4 flex-1 line-clamp-3">${r.desc}</p>
             <div class="flex gap-2">
                 <button onclick="addToBuilder('research','${r.id}')" class="flex-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 py-2 rounded-xl font-bold text-xs">ADD</button>
@@ -389,7 +405,7 @@ function renderList() {
   else if (currentTab === 5) renderSettings(cont);
 }
 
-// --- [개선된] 순서 조정 기능 (ID 기반으로 전체 배열 위치 찾기) ---
+// --- 순서 조정 기능 ---
 async function moveItem(type, id, direction) {
     let list;
     if(type === 'artist') list = artists;
@@ -399,15 +415,10 @@ async function moveItem(type, id, direction) {
     
     const index = list.findIndex(item => item.id === id);
     if(index === -1) return;
-
     const newIdx = index + direction;
     if(newIdx < 0 || newIdx >= list.length) return;
-
-    // 항목 스왑
     [list[index], list[newIdx]] = [list[newIdx], list[index]];
-    
-    await syncAll(); 
-    renderList();
+    await syncAll(); renderList();
 }
 
 async function moveCat(type, index, direction) {
@@ -499,8 +510,35 @@ function renderSettingsDetail() {
           </div>`).join('')}</div>
     `;
   } else if (currentSettingsSubTab === 'import_export') {
-    detail.innerHTML = `<h3 class="text-2xl font-black mb-4">데이터 관리</h3><p class="text-sm text-blue-500 mb-8 font-bold">내보내기 시 각 파트별 JSON 파일이 생성됩니다.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-6">${['artists','prompts','styles','researches'].map(type => `<div class="p-6 border dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center"><p class="font-black uppercase text-slate-500">${type}</p><div class="flex gap-2"><button onclick="exportSingle('${type}')" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold">내보내기</button><button onclick="importSingle('${type}')" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold">가져오기</button></div></div>`).join('')}</div><button onclick="exportData()" class="mt-8 w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-lg shadow-xl">전체 백업 생성</button>`;
+    detail.innerHTML = `
+        <h3 class="text-2xl font-black mb-4">데이터 관리</h3>
+        <p class="text-sm text-blue-500 mb-8 font-bold">내보내기 시 각 파트별 JSON 파일이 생성됩니다. '삭제'는 로컬 데이터를 초기화합니다.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            ${['artists','prompts','styles','researches'].map(type => `
+            <div class="p-6 border dark:border-slate-700 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50 flex flex-col gap-4">
+                <p class="font-black uppercase text-slate-500">${type}</p>
+                <div class="flex gap-2">
+                    <button onclick="exportSingle('${type}')" class="flex-1 bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-bold">내보내기</button>
+                    <button onclick="importSingle('${type}')" class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-bold">가져오기</button>
+                    <button onclick="clearSpecificData('${type}')" class="bg-red-500 text-white px-3 py-2 rounded-xl text-xs font-bold">삭제</button>
+                </div>
+            </div>`).join('')}
+        </div>
+        <button onclick="exportData()" class="mt-8 w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-lg shadow-xl">전체 백업 생성</button>
+    `;
   }
+}
+
+// --- 일괄 삭제 기능 ---
+async function clearSpecificData(type) {
+    if(!confirm(`${type}의 모든 데이터를 삭제하시겠습니까? 백업되지 않은 데이터는 복구할 수 없습니다.`)) return;
+    if(type === 'artists') artists = [];
+    else if(type === 'prompts') prompts = [];
+    else if(type === 'styles') styles = [];
+    else if(type === 'researches') researches = [];
+    await syncAll();
+    alert('삭제되었습니다.');
+    renderSettingsDetail();
 }
 
 // --- 카테고리 로직 ---
@@ -521,10 +559,25 @@ function addSubCat(idx) {
     }
 }
 function delSubCat(pIdx, sName) {
+    if(!confirm(`'${sName}' 소분류를 삭제하시겠습니까? 소속된 프롬프트는 '미분류'로 이동합니다.`)) return;
+    const pCatName = promptCategories[pIdx].name;
+    prompts.forEach(p => {
+        if(p.category === pCatName && p.subCategory === sName) p.subCategory = '';
+    });
     promptCategories[pIdx].subs = promptCategories[pIdx].subs.filter(s => s !== sName);
     syncAll(); renderSettingsDetail();
 }
-function delCat(type, n) { if(confirm('카테고리 삭제?')) { if(type === 'prompt') promptCategories = promptCategories.filter(c => c.name !== n); else researchCategories = researchCategories.filter(c => c !== n); syncAll(); renderSettingsDetail(); } }
+function delCat(type, n) { 
+    if(!confirm(`'${n}' 분류를 삭제하시겠습니까? 소속된 데이터는 '미분류'로 이동합니다.`)) return; 
+    if(type === 'prompt') {
+        prompts.forEach(p => { if(p.category === n) { p.category = ''; p.subCategory = ''; } });
+        promptCategories = promptCategories.filter(c => c.name !== n); 
+    } else {
+        researches.forEach(r => { if(r.category === n) r.category = ''; });
+        researchCategories = researchCategories.filter(c => c !== n); 
+    }
+    syncAll(); renderSettingsDetail(); 
+}
 
 // --- 프롬프트 모달 전용 ---
 function updateSubCatSelect() {
@@ -575,7 +628,7 @@ function edit(type, id) {
     document.getElementById('modalPrompt').classList.remove('hidden');
     document.getElementById('p_word').value = item.word;
     document.getElementById('p_desc').value = item.desc || '';
-    document.getElementById('p_main_cat').innerHTML = promptCategories.map(c => `<option value="${c.name}" ${c.name===item.category?'selected':''}>${c.name}</option>`).join('');
+    document.getElementById('p_main_cat').innerHTML = '<option value="">미분류</option>' + promptCategories.map(c => `<option value="${c.name}" ${c.name===item.category?'selected':''}>${c.name}</option>`).join('');
     updateSubCatSelect();
     document.getElementById('p_sub_cat').value = item.subCategory || '';
     document.getElementById('p_image').value = item.image || '';
@@ -585,7 +638,7 @@ function edit(type, id) {
     const item = researches.find(x => x.id === id);
     document.getElementById('modalResearch').classList.remove('hidden');
     document.getElementById('r_title').value = item.title;
-    document.getElementById('r_category').innerHTML = researchCategories.map(c => `<option value="${c}" ${c===item.category?'selected':''}>${c}</option>`).join('');
+    document.getElementById('r_category').innerHTML = '<option value="">미분류</option>' + researchCategories.map(c => `<option value="${c}" ${c===item.category?'selected':''}>${c}</option>`).join('');
     document.getElementById('r_prompt').value = item.prompt;
     document.getElementById('r_desc').value = item.desc;
     document.getElementById('r_image').value = item.image;
@@ -600,10 +653,10 @@ function addItem() {
   mod.querySelectorAll('input, textarea').forEach(i => i.value = '');
   mod.querySelectorAll('.file-input-label').forEach(l => { l.textContent = "컴퓨터 내 파일 첨부"; l.classList.remove('!border-blue-500', '!text-blue-500', '!bg-blue-50'); });
   if(currentTab === 2) {
-      document.getElementById('p_main_cat').innerHTML = promptCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+      document.getElementById('p_main_cat').innerHTML = '<option value="">미분류</option>' + promptCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
       updateSubCatSelect();
   }
-  if(currentTab === 3) document.getElementById('r_category').innerHTML = researchCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+  if(currentTab === 3) document.getElementById('r_category').innerHTML = '<option value="">미분류</option>' + researchCategories.map(c => `<option value="${c}">${c}</option>`).join('');
   mod.classList.remove('hidden'); if(currentTab === 0) { refreshTagChips(); updateVisual(); }
 }
 
